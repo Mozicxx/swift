@@ -42,7 +42,7 @@ class Mysql {
 	/**
 	 */
 	protected function dsn() {
-		$dsn = 'mysql:dbname=' . $this->configs['schema'] . ';host=' . $this->configs['host'];
+		$dsn = 'mysql:dbname=' . $this->configs ['schema'] . ';host=' . $this->configs ['host'];
 		if (! empty ( $config ['host'] )) {
 			$dsn .= ';port=' . $config ['hostport'];
 		} elseif (! empty ( $config ['socket'] )) {
@@ -57,9 +57,65 @@ class Mysql {
 	
 	/**
 	 */
-	public function execute($sql){
-		if(!$this->link){return false;}
+	public function execute($sql) {
+		if (! $this->link) {
+			return false;
+		}
+		$result = $this->link->exec ( $sql );
+		if (false === $result) {
+			return false;
+		} else {
+			$this->rows = $result;
+			if (preg_match ( "/^\s*(insert\s+into|replace\s+into)\s+/i", $sql )) {
+				$this->lastInsID = $this->_linkID->lastInsertId ();
+			}
+		}
+	}
+	
+	/**
+	 */
+	protected function where($sql) {
+	}
+	
+	/**
+	 */
+	protected function insert($datas) {
+		if (! is_array ( $datas )) {
+			return false;
+		}
+		$table = "_table"; // ?
+		$keys = $this->parseColumn ( array_keys ( $datas ) );
+		$values = $this->parseValue ( array_values ( $datas ) );
+		$sql = 'insert into ' . $table . '(' . $keys . ') values(' . $values . ')';
+		return $this->execute ( $sql );
+	}
+	
+	/**
+	 */
+	public function delete($data) {
 		
+	}
+	
+	/**
+	 */
+	protected function parseColumn($datas) {
+		foreach ( $datas as &$value ) {
+			$value = '`' . $value . '`';
+		}
+		unset ( $value );
+		return implode ( ',', $datas );
+	}
+	
+	/**
+	 */
+	protected function parseValue($datas) {
+		foreach ( $datas as &$value ) {
+			if (is_string ( $value )) {
+				$value = "'" . $value . "'";
+			}
+		}
+		unset ( $value );
+		return implode ( ',', $datas );
 	}
 	//
 }
