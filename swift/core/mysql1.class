@@ -1,0 +1,230 @@
+<?php
+
+namespace Swift;
+
+class Mysql{
+	
+	/**
+	 */
+	public function __construct(){}
+	
+	/**
+	 */
+	public function connect(){}
+	
+	/**
+	 */
+	protected function parseDsn(){}
+	
+	/**
+	 */
+	public function free(){}
+	
+	/**
+	 */
+	public function query(){}
+	
+	/**
+	 */
+	public function execute(){}
+	
+	/**
+	 */
+	public function startTrans(){}
+	
+	/**
+	 */
+	public function commit(){}
+	
+	/**
+	 */
+	public function rollback(){}
+	
+	/**
+	 */
+	private function _getResult(){}
+	
+	/**
+	 */
+	public function getQueryTimes($execute=false){}
+	
+	/**
+	 */
+	public function getExecuteTimes(){}
+	
+	/**
+	 */
+	public function close(){}
+	
+	/**
+	 */
+	public function error(){}
+	
+	/**
+	 */
+	protected function parseLock($lock=false){}
+	
+	/**
+	 */
+	protected function parseSet($data){}
+	
+	/**
+	 */
+	protected function bindParam($name,$value){}
+	
+	/**
+	 */
+	protected function parseKey(&$key){}
+	
+	/**
+	 */
+	protected function parseValue($value){}
+	
+	/**
+	 */
+	protected function parseField($fields){}
+	
+	/**
+	 */
+	protected function parseTable($tables){}
+	
+	/**
+	 */
+	protected function parseWhere($where){}
+	
+	/**
+	 */
+	protected function parseWhereItem($key,$val){}
+	
+	/**
+	 */
+	protected function parseThinkWhere($key,$val){}
+	
+	/**
+	 */
+	protected function parseLimit($limit){}
+	
+	/**
+	 */
+	protected function parseLimit($limit){}
+	
+	/**
+	 */
+	protected function parseOrder($order){}
+	
+	/**
+	 */
+	protected function parseGroup($group){}
+	
+	/**
+	 */
+	protected function parseHaving($having){}
+	
+	/**
+	 */
+	protected function parseComment($comment){}
+	
+	/**
+	 */
+	protected function parseDistinct($distinct){}
+	
+	/**
+	 */
+	protected function parseUnion($union){}
+	
+	/**
+	 */
+	protected function parseBind($bind){}
+	
+	/**
+	 */
+	protected function parseForce($index){}
+	
+	/**
+	 */
+	protected function parseDuplicate($duplicate){}
+	
+	/**
+	 */
+	public function insert($data,$options=array(),$replace=false){}
+	
+	/**
+	 */
+	public function insertAll($dataSet,$options=array(),$replace=false){}
+	
+	/**
+	 */
+	public function selectInsert($fields,$table,$options=array()){}
+	
+	/**
+	 */
+	public function update($data,$options){}
+	
+	/**
+	 */
+	public function delete($options=array()){}
+	
+	/**
+	 */
+	public function select($options=array()){}
+	
+	/**
+	 */
+	public function buildSelectSql($options=array()){}
+	
+	/**
+	 */
+	public function parseSql($sql,$options=array()){}
+	
+	/**
+	 */
+	public function getLastSql($model=''){}
+	
+	/**
+	 */
+	public function getLastInsID(){}
+	
+	/**
+	 */
+	public function getError(){}
+	
+	/**
+	 */
+	 public function escapeString($str){}
+	 
+	/**
+	 */
+	public function setModel($model){}
+	
+	/**
+	 */
+	protected function debug($start){}
+	
+	/**
+	 */
+	protected function initConnect($master=true){}
+	
+	/**
+	 */
+	protected function multiConnect($master=false){}
+	
+	/**
+	 */
+	public function __destruct(){}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+}
