@@ -4,7 +4,8 @@ namespace Swift;
 
 class Mysql {
 	protected $cmd = null;
-	protected $options = array ();
+	protected $sql = null;
+	protected $pieces = array ();
 	protected $pool = array ();
 	protected $link = null;
 	protected $configs = array (
@@ -74,7 +75,21 @@ class Mysql {
 	
 	/**
 	 */
-	protected function where($sql) {
+	protected function where($datas) {
+		if (is_string ( $datas ) && '' != $datas) {
+			return 'where ' . trim ( $datas ) . ' ';
+		}
+		if (is_array ( $datas ) && count ( $datas ) > 0) {
+			$datas = array_change_key_case ( $datas );
+			$sqls = array ();
+			foreach ( $datas as $key => $value ) {
+				if (is_string ( $value ) || is_numeric ( $value )) {
+					$sqls [] = '(`' . $key . '`=' . (is_string ( $value ) ? "'$value'" : ( string ) $value) . ')';
+				}
+			}
+			return count ( $sqls ) > 0 ? 'where ' . implode ( ' and ', $sqls ) . ' ' : '';
+		}
+		return '';
 	}
 	
 	/**
@@ -92,8 +107,11 @@ class Mysql {
 	
 	/**
 	 */
-	public function delete($data) {
-		
+	public function delete() {
+		$table = $this->table ( $this->pieces ['table'] );
+		$where = $this->where ( $this->pieces ['where'] );
+		$order = $this->order ( $this->pieces ['order'] );
+		$limie = $this->limit ( $this->pieces ['limit'] );
 	}
 	
 	/**
