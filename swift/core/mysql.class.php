@@ -77,7 +77,7 @@ class Mysql {
 	 */
 	protected function where($datas) {
 		if (is_string ( $datas ) && '' != $datas) {
-			return 'where ' . trim ( $datas ) . ' ';
+			return 'where ' . trim ( $datas );
 		}
 		if (is_array ( $datas ) && count ( $datas ) > 0) {
 			$datas = array_change_key_case ( $datas );
@@ -87,9 +87,46 @@ class Mysql {
 					$sqls [] = '(`' . $key . '`=' . (is_string ( $value ) ? "'$value'" : ( string ) $value) . ')';
 				}
 			}
-			return count ( $sqls ) > 0 ? 'where ' . implode ( ' and ', $sqls ) . ' ' : '';
+			return count ( $sqls ) > 0 ? 'where ' . implode ( ' and ', $sqls ) : '';
 		}
 		return '';
+	}
+	
+	/**
+	 */
+	protected function order($datas) {
+		if (is_string ( $datas ) && ! empty ( $datas )) {
+			return 'order by ' . strtolower ( trim ( $datas ) );
+		}
+		if (is_array ( $datas ) && ! empty ( $datas )) {
+			$datas = array_change_key_case ( $datas );
+			$sqls = array ();
+			foreach ( $datas as $key => $value ) {
+				if ('asc' == $value || 'desc' == $value) {
+					$sqls [] = '`' . trim ( $key ) . '` ' . strtolower ( trim ( $value ) );
+				}
+			}
+			return 'order by ' . implode ( ', ', $sqls );
+		}
+		return '';
+	}
+	
+	/**
+	 */
+	protected function limit($datas) {
+		if (is_string ( $datas ) && ! empty ( $datas )) {
+			return 'limit '.strtolower(trim($datas))
+		}
+		if (is_integer ( $datas )) {
+			return 'limit '.$datas
+		}
+		if (is_array ( $datas )) {
+			$datas = array_filter ( $datas, 'is_integer' );
+			if (2 == count ( $datas )) {
+				list ( $offset, $rows ) = $datas;
+				return "limit $offset, $rows"
+			}
+		}
 	}
 	
 	/**
@@ -111,7 +148,9 @@ class Mysql {
 		$table = $this->table ( $this->pieces ['table'] );
 		$where = $this->where ( $this->pieces ['where'] );
 		$order = $this->order ( $this->pieces ['order'] );
-		$limie = $this->limit ( $this->pieces ['limit'] );
+		$limit = $this->limit ( $this->pieces ['limit'] );
+		$sql = "delete from $table $where $limit";
+		return $this->execute ( $sql );
 	}
 	
 	/**
