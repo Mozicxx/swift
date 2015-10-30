@@ -5,19 +5,11 @@ namespace Swift;
 class Mysql {
 	protected $cmd = null;
 	protected $sql = null;
-	protected $pieces = array ();
+	protected $frags = array ();
+	protected $datas = array ();
 	protected $pool = array ();
 	protected $link = null;
-	protected $configs = array (
-			'type' => 'mysql',
-			'user' => '',
-			'password' => '',
-			'host' => '127.0.0.1',
-			'port' => '3306',
-			'schema' => '',
-			'charset' => 'utf8',
-			'params' => array () 
-	);
+	protected $configs = array ('type' => 'mysql','user' => '','password' => '','host' => '127.0.0.1','port' => '3306','schema' => '','charset' => 'utf8','params' => array () );
 	
 	/**
 	 */
@@ -28,6 +20,18 @@ class Mysql {
 				$this->options = $this->configs ['params'] + $this->options;
 			}
 		}
+	}
+	
+	/**
+	 */
+	public function __get($prop) {
+		return isset ( $this->datas [$prop] ) ? $this->datas [$prop] : null;
+	}
+	
+	/**
+	 */
+	public function __set($prop, $value) {
+		$this->frags [$prop] = $value;
 	}
 	
 	/**
@@ -70,6 +74,23 @@ class Mysql {
 			if (preg_match ( "/^\s*(insert\s+into|replace\s+into)\s+/i", $sql )) {
 				$this->lastInsID = $this->_linkID->lastInsertId ();
 			}
+		}
+	}
+	
+	/**
+	 */
+	protected function sql() {
+		$names = array ('where','table','alias','column','order','limit','group','having','join','union','distinct' );
+		foreach ( $names as $name ) {
+			$this->$name = $this->$name ( $this->$name );
+		}
+	}
+	
+	/**
+	 */
+	protected function table($datas) {
+		if (is_string ( $datas ) && ! empty ( $datas )) {
+			return strtolower(trim($datas))
 		}
 	}
 	
@@ -164,6 +185,14 @@ class Mysql {
 		$keys = $this->parseColumn ( array_keys ( $datas ) );
 		$values = $this->parseValue ( array_values ( $datas ) );
 		$sql = 'insert into ' . $table . '(' . $keys . ') values(' . $values . ')';
+		return $this->execute ( $sql );
+	}
+	
+	/**
+	 */
+	public function update($datas) {
+		$this->sql ();
+		$sql = "update $this->table $set $this->where $this->order $this->limit";
 		return $this->execute ( $sql );
 	}
 	
