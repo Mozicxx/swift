@@ -75,6 +75,31 @@ class Mysql {
 	
 	/**
 	 */
+	protected function column($datas) {
+		if (is_string ( $datas ) && ! empty ( $datas )) {
+			return strtolower ( trim ( $datas ) );
+		}
+		if (is_array ( $datas ) && ! empty ( $datas )) {
+			$sqls = array ();
+			foreach ( $datas as $key => $value ) {
+				$sqls [] = is_integer ( $key ) ? "`$value`" : "$key as `$value`";
+			}
+			return implode ( ', ', $sqls ) . ' ';
+		}
+		return '* ';
+	}
+	
+	/**
+	 */
+	protected function distinct($datas) {
+		if (is_bool ( $datas ) && true == $datas) {
+			return 'distinct ';
+		}
+		return '';
+	}
+	
+	/**
+	 */
 	protected function where($datas) {
 		if (is_string ( $datas ) && '' != $datas) {
 			return 'where ' . trim ( $datas );
