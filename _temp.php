@@ -1,14 +1,26 @@
 <?php
-
+function column($datas) {
+		if (empty ( $datas )) return '';
+		elseif (is_string ( $datas )) return $datas;
+		elseif (is_array ( $datas )) {
+			$sqls = array ();
+			$datas = array_filter ( $datas, 'is_array' );
+			foreach ( $datas as $data ) {
+				$data = array_filter ( $data, 'is_string' );
+				foreach ( $data as $key=>$value ) {
+					$sqls [] = is_integer($key)?$value:$value.' as '.$key;
+				}
+			}
+			return implode ( ',', $sqls );
+		}
+		return '';
+	}
 
 /**
  * *********************
  */
-$datas = "inner join users u on p.id=u.pid";
-$datas = array ();
-$datas = '';
-$datas = array ('users' );
-$datas = array ("users","u" );
-$datas [0] = array ("users","u","p.id=u.pid","left" );
-$datas [1] = array ("user_details","ud","u.id=ud.id","right" );
-echo "[" . sjoin ( $datas ) . "]";
+
+$datas[0]=array("id","name");
+$datas[1]=array("sex");
+$datas[2]=array("grade"=>"sum(name)");
+echo "[" . column ( $datas ) . "]";
