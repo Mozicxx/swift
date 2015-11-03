@@ -1,26 +1,39 @@
 <?php
-function column($datas) {
+
+function where($datas) {
 		if (empty ( $datas )) return '';
 		elseif (is_string ( $datas )) return $datas;
 		elseif (is_array ( $datas )) {
 			$sqls = array ();
 			$datas = array_filter ( $datas, 'is_array' );
-			foreach ( $datas as $data ) {
-				$data = array_filter ( $data, 'is_string' );
-				foreach ( $data as $key=>$value ) {
-					$sqls [] = is_integer($key)?$value:$value.' as '.$key;
+			foreach ( $datas as $data ) {				
+				foreach($data as $value){
+						if(!is_string($value)) continue 2;
+				}				
+				switch (count($data)) {
+					case 3 :
+						list ( $column, $condition, $logic ) = $data;
+						$sqls[]='('.$column.$condition.') '.$logic;
+						break;
+					case 2 :
+						list ( $column, $condition ) = $data;
+						$sqls[]='('.$column.$condition.') and';
+						break;
 				}
 			}
-			return implode ( ',', $sqls );
+			$sql=implode(' ',$sqls);
+			return empty($sql)?'':substr($sql, 0, strrpos($sql, ' '));
 		}
 		return '';
 	}
-
-/**
- * *********************
- */
-
-$datas[0]=array("id","name");
-$datas[1]=array("sex");
-$datas[2]=array("grade"=>"sum(name)");
-echo "[" . column ( $datas ) . "]";
+	
+	/*********************/
+	$datas='';
+	$datas=array();
+	$datas=3;
+	$datas="id=5 and name='luna'";
+	$datas=array();
+	$datas[]=array('id','=12', array());
+	$datas[]=array('name',"='luna'","or");
+	$datas[]=array('sex',"is not null", 'or');
+		echo '['.where($datas).']';

@@ -9,7 +9,7 @@ class Mysql {
 	protected $datas = array ();
 	protected $pool = array ();
 	protected $link = null;
-	protected $configs = array ( 'type' => 'mysql','user' => '','password' => '','host' => '127.0.0.1','port' => '3306','schema' => '','charset' => 'utf8','params' => array () );
+	protected $configs = array ('type' => 'mysql','user' => '','password' => '','host' => '127.0.0.1','port' => '3306','schema' => '','charset' => 'utf8','params' => array () );
 	
 	/**
 	 */
@@ -25,7 +25,7 @@ class Mysql {
 	/**
 	 */
 	public function __get($prop) {
-		return isset ( $this->datas [$prop] ) ? $this->datas [$prop] : null;
+		return isset ( $this->frags [$prop] ) ? $this->frags [$prop] : null;
 	}
 	
 	/**
@@ -80,10 +80,38 @@ class Mysql {
 	/**
 	 */
 	protected function sql() {
-		$names = array ( 'distinct','column','table','alias','join','where','group','having','order','limit' );
+		$names = array ('distinct','column','table','alias','join','where','group','having','order','limit' );
 		foreach ( $names as $name ) {
 			$this->$name = $this->$name ( $this->$name );
 		}
+	}
+	
+	/**
+	 */
+	protected function distinct($datas) {
+		if (true === $datas) return 'distinct';
+		return '';
+	}
+	
+	/**
+	 */
+	protected function column($datas) {
+		if (empty ( $datas )) return '';
+		elseif (is_string ( $datas )) return $datas;
+		elseif (is_array ( $datas )) {
+			$sqls = array ();
+			$datas = array_filter ( $datas, 'is_array' );
+			foreach ( $datas as $data ) {
+				foreach ( $data as $value ) {
+					if (! is_string ( $value )) continue 2;
+				}
+				foreach ( $data as $key => $value ) {
+					$sqls [] = is_integer ( $key ) ? $value : $value . ' as ' . $key;
+				}
+			}
+			return implode ( ',', $sqls );
+		}
+		return '';
 	}
 	
 	/**
@@ -108,6 +136,64 @@ class Mysql {
 				}
 			}
 			return implode ( ',', $sqls );
+		}
+		return '';
+	}
+	
+	/**
+	 */
+	protected function having($datas) {
+		if (empty ( $datas )) return '';
+		elseif (is_string ( $datas )) return $datas;
+		elseif (is_array ( $datas )) {
+			$sqls = array ();
+			$datas = array_filter ( $datas, 'is_array' );
+			foreach ( $datas as $data ) {
+				foreach ( $data as $value ) {
+					if (! is_string ( $value )) continue 2;
+				}
+				switch (count ( $data )) {
+					case 3 :
+						list ( $column, $condition, $logic ) = $data;
+						$sqls [] = '(' . $column . $condition . ') ' . $logic;
+						break;
+					case 2 :
+						list ( $column, $condition ) = $data;
+						$sqls [] = '(' . $column . $condition . ') and';
+						break;
+				}
+			}
+			$sql = implode ( ' ', $sqls );
+			return empty ( $sql ) ? '' : substr ( $sql, 0, strrpos ( $sql, ' ' ) );
+		}
+		return '';
+	}
+	
+	/**
+	 */
+	protected function where($datas) {
+		if (empty ( $datas )) return '';
+		elseif (is_string ( $datas )) return $datas;
+		elseif (is_array ( $datas )) {
+			$sqls = array ();
+			$datas = array_filter ( $datas, 'is_array' );
+			foreach ( $datas as $data ) {
+				foreach ( $data as $value ) {
+					if (! is_string ( $value )) continue 2;
+				}
+				switch (count ( $data )) {
+					case 3 :
+						list ( $column, $condition, $logic ) = $data;
+						$sqls [] = '(' . $column . $condition . ') ' . $logic;
+						break;
+					case 2 :
+						list ( $column, $condition ) = $data;
+						$sqls [] = '(' . $column . $condition . ') and';
+						break;
+				}
+			}
+			$sql = implode ( ' ', $sqls );
+			return empty ( $sql ) ? '' : substr ( $sql, 0, strrpos ( $sql, ' ' ) );
 		}
 		return '';
 	}
@@ -186,56 +272,6 @@ class Mysql {
 	
 	/**
 	 */
-	protected function column($datas) {
-		if (empty ( $datas )) return '';
-		elseif (is_string ( $datas )) return $datas;
-		elseif (is_array ( $datas )) {
-			$sqls = array ();
-			$datas = array_filter ( $datas, 'is_array' );
-			foreach ( $datas as $data ) {
-				$data = array_filter ( $data, 'is_string' );
-				foreach ( $data as $key => $value ) {
-					$sqls [] = is_integer ( $key ) ? $value : $value . ' as ' . $key;
-				}
-			}
-			return implode ( ',', $sqls );
-		}
-		return '';
-	}
-	
-	/**
-	 */
-	protected function distinct($datas) {
-		if (true === $datas) return 'distinct';
-		return '';
-	}
-	
-	/**
-	 */
-	protected function having($datas) {
-	}
-	
-	/**
-	 */
-	protected function where($datas) {
-		if (is_string ( $datas ) && '' != $datas) {
-			return 'where ' . trim ( $datas );
-		}
-		if (is_array ( $datas ) && count ( $datas ) > 0) {
-			$datas = array_change_key_case ( $datas );
-			$sqls = array ();
-			foreach ( $datas as $key => $value ) {
-				if (is_string ( $value ) || is_numeric ( $value )) {
-					$sqls [] = '(`' . $key . '`=' . (is_string ( $value ) ? "'$value'" : ( string ) $value) . ')';
-				}
-			}
-			return count ( $sqls ) > 0 ? 'where ' . implode ( ' and ', $sqls ) : '';
-		}
-		return '';
-	}
-	
-	/**
-	 */
 	protected function order($datas) {
 		if (is_string ( $datas ) && ! empty ( $datas )) {
 			return 'order by ' . strtolower ( trim ( $datas ) );
@@ -287,19 +323,30 @@ class Mysql {
 	/**
 	 */
 	public function update($datas) {
-		$this->sql ();
-		$sql = "update $this->table $set $this->where $this->order $this->limit";
-		return $this->execute ( $sql );
+		if (empty ( $datas )) return false;
+		elseif (is_array ( $datas )) {
+			foreach ( $datas as $key => $value ) {
+				if (! is_string ( $key )) return false;
+				elseif (is_string ( $value )) $updates [] = $key . "='" . $value . "'";
+				elseif (is_integer ( $value ) || is_float ( $value )) $updates [] = $key . '=' . $value;
+				elseif (is_bool ( $value )) $updates [] = $key . '=' . ($value ? '1' : '0');
+				elseif (is_null ( $value )) $updates [] = $key . '=' . $value;
+				else
+					return false;
+			}
+			if (empty ( $updates )) return false;
+			$update = implode ( ',', $updates );
+			$sql = "update $this->table set $this->where $this->order $this->limit";
+			return $this->execute ( $sql );
+		}
+		return false;
 	}
 	
 	/**
 	 */
 	public function delete() {
-		$table = $this->table ( $this->pieces ['table'] );
-		$where = $this->where ( $this->pieces ['where'] );
-		$order = $this->order ( $this->pieces ['order'] );
-		$limit = $this->limit ( $this->pieces ['limit'] );
-		$sql = "delete from $table $where $limit";
+		$this->sql ();
+		$sql = 'delete from ' . $this->table . ' ' . $this->where . ' ' . $this->limit;
 		return $this->execute ( $sql );
 	}
 	
