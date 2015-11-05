@@ -1,39 +1,33 @@
 <?php
 
-function where($datas) {
-		if (empty ( $datas )) return '';
-		elseif (is_string ( $datas )) return $datas;
-		elseif (is_array ( $datas )) {
-			$sqls = array ();
-			$datas = array_filter ( $datas, 'is_array' );
-			foreach ( $datas as $data ) {				
-				foreach($data as $value){
-						if(!is_string($value)) continue 2;
-				}				
-				switch (count($data)) {
-					case 3 :
-						list ( $column, $condition, $logic ) = $data;
-						$sqls[]='('.$column.$condition.') '.$logic;
-						break;
-					case 2 :
-						list ( $column, $condition ) = $data;
-						$sqls[]='('.$column.$condition.') and';
-						break;
-				}
+function insert($datas) {		
+		if(empty($datas)) return false;
+		elseif(is_array($datas)){
+			$keys=array_keys($datas);
+			foreach($keys as $key){
+				if(!is_string($key)) return false;
 			}
-			$sql=implode(' ',$sqls);
-			return empty($sql)?'':substr($sql, 0, strrpos($sql, ' '));
+			$values=array_values($datas);
+			foreach($values as &$value){		// default=?
+				if(is_integer($value)||is_float($value)) $value=$value;
+				elseif(is_string($value)) $value="'".$value."'";
+				elseif(is_bool($value)) $value=$value?'1':'0';
+				elseif(is_null($value)) $value='null';
+				else return false;		
+			}
+			$keyStr=implode(',',$keys);
+			$valueStr=implode(',',$values);
+			
+			//$this->sql();
+			$sql='insert into '.'blog'. '(' . $keyStr . ') values(' . $valueStr . ')';
+			//return $this->execute ( $sql );
+			return $sql;
 		}
-		return '';
+		return false;
 	}
 	
 	/*********************/
-	$datas='';
-	$datas=array();
-	$datas=3;
-	$datas="id=5 and name='luna'";
-	$datas=array();
-	$datas[]=array('id','=12', array());
-	$datas[]=array('name',"='luna'","or");
-	$datas[]=array('sex',"is not null", 'or');
-		echo '['.where($datas).']';
+		$datas='';
+		$datas=array();
+		$datas=array("name"=>"luna","sex"=>"female","age"=>5.2323432);
+		echo '['.insert($datas).']';
