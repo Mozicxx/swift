@@ -21,13 +21,15 @@ class Mysql {
 	
 	/**
 	 */
-	public function __construct($configs = null) {
-		if (! is_null ( $configs )) {
+	public function __construct($configs = array()) {
+		if(empty($configs)) return null;
+		elseif(is_array($configs)){
 			$this->configs = array_merge ( $this->configs, $configs );
 			if (is_array ( $this->configs ['params'] )) {
 				$this->options = $this->configs ['params'] + $this->options;
 			}
 		}
+		return null;
 	}
 	
 	/**
