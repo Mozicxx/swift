@@ -1,33 +1,57 @@
 <?php
+class mydb{
+		public $connection=null;
+	
+	public function __construct(){
+			$dsn = 'mysql:dbname=mysql;host=127.0.0.1';
+			$user = 'root';
+			$password = 'goodwin@000';
 
-function insert($datas) {		
-		if(empty($datas)) return false;
-		elseif(is_array($datas)){
-			$keys=array_keys($datas);
-			foreach($keys as $key){
-				if(!is_string($key)) return false;
+			try {
+				$this->connection = new PDO($dsn, $user, $password);
+			} catch (PDOException $e) {
+				echo 'Connection failed: ' . $e->getMessage();
 			}
-			$values=array_values($datas);
-			foreach($values as &$value){		// default=?
-				if(is_integer($value)||is_float($value)) $value=$value;
-				elseif(is_string($value)) $value="'".$value."'";
-				elseif(is_bool($value)) $value=$value?'1':'0';
-				elseif(is_null($value)) $value='null';
-				else return false;		
+	}
+	
+		public function getColumns($table) {
+		if (empty ( $table )) return false;
+		elseif (is_string ( $table )) {
+			$arr = explode ( '.', $table );
+			if (2 == count ( $arr )) {
+				list ( $db, $table ) = $arr;
+				$sql = 'show columns from `' . $db . '`.`' . $table . '`';
+			} elseif (1 == count ( $arr )) {
+				list ( $table ) = $arr;
+				$sql = 'show columns from `' . $table . '`';
+			} else
+				return false;
+			$result = $this->connection->query ( $sql );
+			$datas = array ();
+			if ($result) {
+				foreach ( $result as $row ) {
+					$rowData=array();
+					$row = array_change_key_case ( $row );
+					foreach($row as $key=>$value){
+						if(is_string($key))
+						$rowData[$key]=strtolower($value);
+					}
+					$datas [$row ['field']] = $rowData;
+				}
 			}
-			$keyStr=implode(',',$keys);
-			$valueStr=implode(',',$values);
-			
-			//$this->sql();
-			$sql='insert into '.'blog'. '(' . $keyStr . ') values(' . $valueStr . ')';
-			//return $this->execute ( $sql );
-			return $sql;
+			return $datas;
 		}
 		return false;
 	}
-	
+	//
+}
 	/*********************/
-		$datas='';
-		$datas=array();
-		$datas=array("name"=>"luna","sex"=>"female","age"=>5.2323432);
-		echo '['.insert($datas).']';
+	$db=new mydb();
+	print_r($db->getColumns('user'));
+	
+	
+	
+	
+	
+	
+	
