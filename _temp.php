@@ -1,53 +1,57 @@
 <?php
 class mydb{
-		public $connection=null;
-	
-	public function __construct(){
-			$dsn = 'mysql:dbname=mysql;host=127.0.0.1';
-			$user = 'root';
-			$password = 'goodwin@000';
-
+		protected $link;
+		public $configs=array(
+			'host'=>'localhost',
+			'port'=>'3306',
+			'socket'=>'/temp/mysql.sock',
+			'dbname'=>'swift',
+			'charset'=>'utf8',
+			'user'=>'root',
+			'password'=>'1qaz2wsx',
+			'options'=>array(),
+		);
+		protected $options = array (
+		PDO::ATTR_CASE => PDO::CASE_LOWER,
+		PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+		PDO::ATTR_ORACLE_NULLS => PDO::NULL_NATURAL,
+		PDO::ATTR_STRINGIFY_FETCHES => false ,
+		'dkfjdkjfkdjfk'=>false,
+	);
+		
+	public function connect() {
+		if (! isset( $this->link )) {
 			try {
-				$this->connection = new PDO($dsn, $user, $password);
-			} catch (PDOException $e) {
-				echo 'Connection failed: ' . $e->getMessage();
+				$this->link = new \PDO( $this->dsn(), $this->configs['user'], $this->configs['password'], $this->options);
+			} catch ( \PDOException $e ) {
+				echo $e->getMessage();		// E() ?
 			}
+		}
+		return $this->link;
 	}
 	
-		public function getColumns($table) {
-		if (empty ( $table )) return false;
-		elseif (is_string ( $table )) {
-			$arr = explode ( '.', $table );
-			if (2 == count ( $arr )) {
-				list ( $db, $table ) = $arr;
-				$sql = 'show columns from `' . $db . '`.`' . $table . '`';
-			} elseif (1 == count ( $arr )) {
-				list ( $table ) = $arr;
-				$sql = 'show columns from `' . $table . '`';
-			} else
-				return false;
-			$result = $this->connection->query ( $sql );
-			$datas = array ();
-			if ($result) {
-				foreach ( $result as $row ) {
-					$rowData=array();
-					$row = array_change_key_case ( $row );
-					foreach($row as $key=>$value){
-						if(is_string($key))
-						$rowData[$key]=strtolower($value);
-					}
-					$datas [$row ['field']] = $rowData;
-				}
-			}
-			return $datas;
+	protected function dsn() {
+		$dsn = array();
+		if (! empty( $this->configs['host'] )) {
+			$dsn []= 'host=' . $this->configs['host'];
+			! empty( $this->configs['port'] ) ? $dsn []='port=' . $this->configs['port']: null;
+		} elseif (! empty( $this->configs['socket'] )) {
+			$dsn []= 'unix_socket=' . $this->configs['socket'];
 		}
-		return false;
+		! empty( $this->configs['dbname'] ) ? $dsn []= 'dbname='.$this->configs['dbname']:null;
+		! empty( $this->configs['charset'] ) ? $dsn []= 'charset='.$this->configs['charset']:null;
+		return 'mysql:'.implode(';',$dsn);
+	}
+	
+	public function aa(){
+		$this->options=array_merge($this->options, array(PDO::ATTR_STRINGIFY_FETCHES => true ));
+		print_r($this->options);
 	}
 	//
 }
 	/*********************/
 	$db=new mydb();
-	print_r($db->getColumns('user'));
+	$db->connect();
 	
 	
 	
