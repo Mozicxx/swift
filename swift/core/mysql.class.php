@@ -45,6 +45,13 @@ class Mysql {
 	
 	/**
 	 */
+	public function __destruct(){
+		$this->free();
+		$this->close();
+	}
+	
+	/**
+	 */
 	public function __get( $prop ) {
 		return isset( $this->frags[$prop] ) ? $this->frags[$prop] : null;
 	}
@@ -53,6 +60,12 @@ class Mysql {
 	 */
 	public function __set( $prop, $value ) {
 		$this->frags[$prop] = $value;
+	}
+	
+	/**
+	 */
+	public function close(){
+		$this->link=null;
 	}
 	
 	/**
@@ -72,11 +85,17 @@ class Mysql {
 	/**
 	 */
 	public function commit() {
+		if(!$this->link) return false;
+		if($this->link->inTransaction()) return $this->link->commit();
+		return false;
 	}
 	
 	/**
 	 */
 	public function rollback() {
+		if(!$this->link) return false;
+		if($this->link->inTransaction()) return $this->link->rollback();
+		return false;
 	}
 	
 	/**
@@ -349,8 +368,15 @@ class Mysql {
 	/**
 	 */
 	public function query() {
+		$this->connect();
+		if(!$this->link) return false;
 		$this->sql();
 		$sql = "";
+		if(!empty($this->ds)) $this->free();
+		$this->ds=$this->link->query($sql);
+		if($this->ds){
+			
+		}
 	}
 	
 	/**
