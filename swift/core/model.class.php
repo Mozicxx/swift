@@ -35,5 +35,97 @@ class Model {
 		return $this->database ? true : false;
 	}
 	
+	/**
+	 */
+	public function table($datas) {
+		if (is_string ( $datas )) {
+			unset ( $this->database->datas ['table'] );
+			$this->database->datas ['table'] = $datas;
+		} elseif (is_array ( $datas )) {
+			if (! is_array ( $this->database->datas ['table'] )) {
+				unset ( $this->databaes->datas ['table'] );
+			}
+			$this->database->datas ['table'] [] = $datas;
+		}
+	}
+	
+	/**
+	 */
+	public function order($datas) {
+		if (is_string ( $datas )) {
+			$this->database->datas ['order'] = $datas;
+		} elseif (is_array ( $datas )) {
+			$this->database->datas ['order'] [] = $datas;
+		}
+		return $this;
+	}
+	
+	/**
+	 */
+	public function limit($datas) {
+		unset ( $this->database->datas ['limit'] );
+		$this->database->datas ['limit'] = $datas;
+		return $this;
+	}
+	
+	/**
+	 */
+	public function where($datas) {
+		if (is_string ( $datas )) {
+			unset ( $this->database->datas ['where'] );
+			$this->database->datas ['where'] = $datas;
+		} elseif (is_array ( $datas )) {
+			if (! is_array ( $this->database->datas ['where'] )) {
+				unset ( $this->databaes->datas ['where'] );
+			}
+			$this->database->datas ['where'] [] = $datas;
+		}
+	}
+	
+	/**
+	 */
+	public function select() {
+		return $this->database->select ();
+	}
+	
+	/**
+	 */
+	public function add($datas) {
+		return $this->database->insert ( $datas );
+	}
+	
+	/**
+	 */
+	public function save($datas) {
+		return $this->database->update ( $datas );
+	}
+	
+	/**
+	 */
+	public function delete() {
+		return $this->database->delete ();
+	}
 	//
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
