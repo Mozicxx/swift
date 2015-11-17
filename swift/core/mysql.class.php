@@ -26,25 +26,22 @@ class Mysql {
 		'user' => 'root',
 		'password' => '' 
 	);
-	protected $deploy=
 	
 	/**
 	 */
-	public 
-
-function __construct( $dsn = array(), $options = array() ) {
-	if (is_array( $configs )) {
-		$filters = array ();
-		$keys = array_keys( $this->configs );
-		foreach ( $configs as $key => $value ) {
-			in_array( $key, $keys ) && is_string( $value ) ? $filters[$key] = $value : null;
+	public function __construct( $dsn = array(), $options = array() ) {
+		if (is_array( $configs )) {
+			$filters = array ();
+			$keys = array_keys( $this->configs );
+			foreach ( $configs as $key => $value ) {
+				in_array( $key, $keys ) && is_string( $value ) ? $filters[$key] = $value : null;
+			}
+			$this->configs = array_merge( $this->configs, $filters );
 		}
-		$this->configs = array_merge( $this->configs, $filters );
+		if (is_array( $options )) {
+			$this->options = $filters + $this->options;
+		}
 	}
-	if (is_array( $options )) {
-		$this->options = $filters + $this->options;
-	}
-}
 	
 	/**
 	 */
@@ -125,13 +122,15 @@ function __construct( $dsn = array(), $options = array() ) {
 	
 	/**
 	 */
-	protected function single(){
-		
+	protected function single() {
 	}
 	
 	/**
 	 */
-	protected function ddb(){}
+	protected function ddb($rw) {
+		
+		
+	}
 	
 	/**
 	 */
