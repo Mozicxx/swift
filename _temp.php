@@ -19,39 +19,27 @@ class mydb{
 		'dkfjdkjfkdjfk'=>false,
 	);
 		
-	public function connect() {
-		if (! isset( $this->link )) {
-			try {
-				$this->link = new \PDO( $this->dsn(), $this->configs['user'], $this->configs['password'], $this->options);
-			} catch ( \PDOException $e ) {
-				echo $e->getMessage();		// E() ?
+	public function column( $datas ) {
+		if (empty( $datas )) return '';
+		elseif (is_string( $datas )) return $datas;
+		elseif (is_array( $datas )) {
+			$sqls = array ();
+			foreach ( array_filter( $datas, 'is_array' ) as $data ) {
+				foreach ( array_filter( $data, 'is_string' ) as $key => $value ) {
+					$sqls[] = is_integer( $key ) ? $value : $value . ' as ' . $key;
+				}
 			}
+			return implode( ',', $sqls );
 		}
-		return $this->link;
-	}
-	
-	protected function dsn() {
-		$dsn = array();
-		if (! empty( $this->configs['host'] )) {
-			$dsn []= 'host=' . $this->configs['host'];
-			! empty( $this->configs['port'] ) ? $dsn []='port=' . $this->configs['port']: null;
-		} elseif (! empty( $this->configs['socket'] )) {
-			$dsn []= 'unix_socket=' . $this->configs['socket'];
-		}
-		! empty( $this->configs['dbname'] ) ? $dsn []= 'dbname='.$this->configs['dbname']:null;
-		! empty( $this->configs['charset'] ) ? $dsn []= 'charset='.$this->configs['charset']:null;
-		return 'mysql:'.implode(';',$dsn);
-	}
-	
-	public function aa(){
-		$this->options=array_merge($this->options, array(PDO::ATTR_STRINGIFY_FETCHES => true ));
-		print_r($this->options);
+		return '';
 	}
 	//
 }
 	/*********************/
+	$datas[]=array('id','name'=>'myname',null, 12, 'sex');
+	$datas[]=array('grade','max'=>'sum(sex)');
 	$db=new mydb();
-	$db->connect();
+	echo $db->column($datas);
 	
 	
 	
