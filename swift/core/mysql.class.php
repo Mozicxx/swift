@@ -127,24 +127,26 @@ class Mysql {
 	
 	/**
 	 */
-	protected function ddb($rw) {
-		
-		
+	protected function ddb( $rw ) {
 	}
 	
 	/**
 	 */
-	protected function dsn() {
-		$dsn = array ();
-		if (! empty( $this->configs['host'] )) {
-			$dsn[] = 'host=' . $this->configs['host'];
-			! empty( $this->configs['port'] ) ? $dsn[] = 'port=' . $this->configs['port'] : null;
-		} elseif (! empty( $this->configs['socket'] )) {
-			$dsn[] = 'unix_socket=' . $this->configs['socket'];
-		}
-		! empty( $this->configs['dbname'] ) ? $dsn[] = 'dbname=' . $this->configs['dbname'] : null; // dbname='0' ?
-		! empty( $this->configs['charset'] ) ? $dsn[] = 'charset=' . $this->configs['charset'] : null;
-		return 'mysql:' . implode( ';', $dsn );
+	protected function dsn( $str ) {
+		// mysql://root:123456@localhost:3306/thinkphp#utf8
+		$pattern = '/():\/\/)():()@():()\/()#()/';
+		$children = array ();
+		$preg_match( $pattern, $str, $children );
+		list ( $dsn, $type, $username, $password, $host, $port, $dbname, $charset ) = $children;
+		$dsn[] = 'host=' . $host;
+		! empty( $port ) ? $dsn[] = 'port=' . $port : null;
+		! empty( $dbname ) ? $dsn[] = 'dbname=' . $dbname : null; // dbname='0' ?
+		! empty( $charset ) ? $dsn[] = 'charset=' . $charset : null;
+		return array (
+			'dsn' => $type . ':' . implode( ';', $dsn ),
+			'username' => $username,
+			'password' => $password 
+		);
 	}
 	
 	/**
