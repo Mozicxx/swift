@@ -328,18 +328,17 @@ class Mysql {
 	/**
 	 */
 	protected function group($datas) {
-		if (empty ( $datas )) return '';
+		if (empty ( $datas ) && '0' !== $datas) return '';
 		elseif (is_string ( $datas )) return $datas;
 		elseif (is_array ( $datas )) {
 			$sqls = array ();
-			$datas = array_filter ( $datas, 'is_array' );
-			foreach ( $datas as $data ) {
-				$data = array_filter ( $data, 'is_string' );
-				foreach ( $data as $key => $value ) {
-					$sqls [] = is_integer ( $key ) ? $value : $key . ' ' . $value;
+			foreach ( array_filter ( $datas, 'is_array' ) as $data ) {
+				foreach ( array_filter ( $data, 'is_string' ) as $key => $value ) {
+					if (is_integer ( $key )) $sqls [] = $value;
+					elseif ('asc' == $value || 'desc' == $value) $sqls [] = $key . ' ' . $value;
 				}
 			}
-			return implode ( ',', $sqls );
+			return empty ( $sqls ) ? '' : 'order by ' . implode ( ',' . sqls );
 		}
 		return '';
 	}
@@ -347,12 +346,11 @@ class Mysql {
 	/**
 	 */
 	protected function having($datas) {
-		if (empty ( $datas )) return '';
+		if (empty ( $datas ) && '0' !== $datas) return '';
 		elseif (is_string ( $datas )) return $datas;
 		elseif (is_array ( $datas )) {
 			$sqls = array ();
-			$datas = array_filter ( $datas, 'is_array' );
-			foreach ( $datas as $data ) {
+			foreach ( array_filter ( $datas, 'is_array' ) as $data ) {
 				foreach ( $data as $value ) {
 					if (! is_string ( $value )) continue 2;
 				}
@@ -376,41 +374,19 @@ class Mysql {
 	/**
 	 */
 	protected function order($datas) {
-		if(empty($datas)&&'0'!=$datas) return '';
-		elseif(is_string($datas)) return 'order by '.$datas;
-		elseif(is_array($datas)){
-			$sqls=array();
-			foreach(array_filter($datas, 'is_array') as $data{
-				foreach(array_filter($data, 'is_string') as $key=>$value){
-					if(is_integer($key))$sqls[]=$value;
-					elseif('asc' == $value || 'desc' == $value)$sqls[]=$key.' '.$value;
+		if (empty ( $datas ) && '0' !== $datas) return '';
+		elseif (is_string ( $datas )) return 'order by ' . $datas;
+		elseif (is_array ( $datas )) {
+			$sqls = array ();
+			foreach ( array_filter ( $datas, 'is_array' ) as $data ) {
+				foreach ( array_filter ( $data, 'is_string' ) as $key => $value ) {
+					if (is_integer ( $key )) $sqls [] = $value;
+					elseif ('asc' == $value || 'desc' == $value) $sqls [] = $key . ' ' . $value;
 				}
 			}
-			return empty($sqls)? '': 'order by '.implode(','.sqls);
+			return empty ( $sqls ) ? '' : 'order by ' . implode ( ',' . sqls );
 		}
-		
-
-
-
-
-
-
-
-
-
-return '';
-
-$datas = array_change_key_case ( $datas );
-$sqls = array ();
-foreach ( $datas as $key => $value ) {
-	if ('asc' == $value || 'desc' == $value) {
-		$sqls [] = '`' . trim ( $key ) . '` ' . strtolower ( trim ( $value ) );
-	}
-}
-return 'order by ' . implode ( ', ', $sqls );
-
-			
-
+		return '';
 	}
 	
 	/**
@@ -575,7 +551,7 @@ return 'order by ' . implode ( ', ', $sqls );
 	//
 }
 
-/* ********************** */
+/* ******************* */
 $mysql = new Mysql ( 'mysql://root:goodwin@000@localhost:3306/html#utf8' );
 
 
