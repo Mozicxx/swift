@@ -24,7 +24,7 @@ class Mysql {
 	/**
 	 */
 	public function __construct($dsn) {
-		$pattern = '/^(\w+):\/\/(\w+):(\w*)@([\w.]+):(\d*)\/(\w*)#(\w*)$/'; // mysql://root:123456@localhost:3306/swift#utf8
+		$pattern = '/^(\w+):\/\/(\w+):(.*)@([\w.]+):(\d*)\/(\w*)#(\w*)$/'; // mysql://root:123456@localhost:3306/swift#utf8
 		$reads = array ();
 		$writes = array ();
 		$filters = array ( 
@@ -167,18 +167,17 @@ class Mysql {
 	
 	/**
 	 */
-	protected function dsn($dsn) {
-		$pattern = '/^(\w+):\/\/(\w+):(\w*)@([\w.]+):(\d*)\/(\w*)#(\w*)$/'; // mysql://root:123456@localhost:3306/thinkphp#utf8
+	public function dsn($dsn) {
+		$pattern = '/^(\w+):\/\/(\w+):(.*)@([\w.]+):(\d*)\/(\w*)#(\w*)$/'; // mysql://root:123456@localhost:3306/thinkphp#utf8
 		$params = array ();
-		$dsn = array ();
-		if (! $preg_match ( $pattern, $dsn, $arr )) return false;
+		if (! preg_match ( $pattern, $dsn, $params )) return false;
 		list ( $dsn, $type, $username, $password, $host, $port, $dbname, $charset ) = $params;
-		$dsn [] = 'host=' . $host;
-		'' != $port ? $dsn [] = 'port=' . $port : null;
-		'' != $dbname ? $dsn [] = 'dbname=' . $dbname : null;
-		'' != $charset ? $dsn [] = 'charset=' . $charset : null;
+		$dsn1 [] = 'host=' . $host;
+		'' != $port ? $dsn1 [] = 'port=' . $port : null;
+		'' != $dbname ? $dsn1 [] = 'dbname=' . $dbname : null;
+		'' != $charset ? $dsn1 [] = 'charset=' . $charset : null;
 		return array ( 
-			'dsn' => $type . ':' . implode ( ';', $dsn ),
+			'dsn' => $type . ':' . implode ( ';', $dsn1 ),
 			'username' => $username,
 			'password' => $password );
 	}
@@ -188,7 +187,7 @@ class Mysql {
 	protected function sql() {
 		$frags = array ( 
 			'distinct',
-			'column',
+			'field',
 			'table',
 			'join',
 			'where',
@@ -207,13 +206,13 @@ class Mysql {
 	/**
 	 */
 	protected function distinct($datas) {
-		if (true === $datas) return 'distinct';
+		if (is_bool ( $datas )) return empty ( $datas ) ? 'all' : 'distinct';
 		return '';
 	}
 	
 	/**
 	 */
-	protected function column($datas) {
+	protected function field($datas) {
 		if (empty ( $datas )) return '';
 		elseif (is_string ( $datas )) return $datas;
 		elseif (is_array ( $datas )) {
@@ -252,8 +251,7 @@ class Mysql {
 		elseif (is_string ( $datas )) return $datas;
 		elseif (is_array ( $datas )) {
 			$sqls = array ();
-			$datas = array_filter ( $datas, 'is_array' );
-			foreach ( $datas as $data ) {
+			foreach ( array_filter ( $datas, 'is_array' ) as $data ) {
 				$len = count ( $data );
 				$len2 = count ( array_filter ( $data, 'is_string' ) );
 				if ($len > $len2) continue;
@@ -378,31 +376,53 @@ class Mysql {
 	/**
 	 */
 	protected function order($datas) {
-		if (is_string ( $datas ) && ! empty ( $datas )) {return 'order by ' . strtolower ( trim ( $datas ) );}
-		if (is_array ( $datas ) && ! empty ( $datas )) {
-			$datas = array_change_key_case ( $datas );
-			$sqls = array ();
-			foreach ( $datas as $key => $value ) {
-				if ('asc' == $value || 'desc' == $value) {
-					$sqls [] = '`' . trim ( $key ) . '` ' . strtolower ( trim ( $value ) );
+		if(empty($datas)&&'0'!=$datas) return '';
+		elseif(is_string($datas)) return 'order by '.$datas;
+		elseif(is_array($datas)){
+			$sqls=array();
+			foreach(array_filter($datas, 'is_array') as $data{
+				foreach(array_filter($data, 'is_string') as $key=>$value){
+					if(is_integer($key))$sqls[]=$value;
+					elseif('asc' == $value || 'desc' == $value)$sqls[]=$key.' '.$value;
 				}
 			}
-			return 'order by ' . implode ( ', ', $sqls );
+			return empty($sqls)? '': 'order by '.implode(','.sqls);
 		}
-		return '';
+		
+
+
+
+
+
+
+
+
+
+return '';
+
+$datas = array_change_key_case ( $datas );
+$sqls = array ();
+foreach ( $datas as $key => $value ) {
+	if ('asc' == $value || 'desc' == $value) {
+		$sqls [] = '`' . trim ( $key ) . '` ' . strtolower ( trim ( $value ) );
+	}
+}
+return 'order by ' . implode ( ', ', $sqls );
+
+			
+
 	}
 	
 	/**
 	 */
 	protected function limit($datas) {
-		if (empty ( $datas )) return '';
-		elseif (is_string ( $datas )) return 'limit ' . $datas;
-		elseif (is_integer ( $datas )) return 'limit ' . ( int ) $datas;
-		elseif (is_array ( $datas )) {
-			foreach ( $datas as $value ) {
-				if (! is_integer ( $value )) return '';
+		if (is_string ( $datas ) && '' != $datas) return 'limit ' . $datas;
+		elseif (is_integer ( $datas )) return 'limit ' . strval ( $datas );
+		elseif (is_array ( $datas ) && ! empty ( $datas )) {
+			foreach ( $datas as $data ) {
+				if (! is_integer ( $data )) return '';
 			}
-			return 2 == count ( $datas ) ? implode ( ',', $datas ) : '';
+			return 2 >= count ( $datas ) ? 'limit ' . implode ( ',', $datas ) : '';
 		}
 		return '';
 	}
@@ -411,7 +431,7 @@ class Mysql {
 	 */
 	public function cmd($sql) {
 		if (! $this->link ()) return false;
-		if (! $this->ds) $this->free ();
+		if ($this->ds) $this->free ();
 		$this->ds = $this->link->prepare ( $this->sql () );
 		if ($this->ds && $this->ds->execute ()) return $this->ds->rowCount;
 		return false;
@@ -420,7 +440,7 @@ class Mysql {
 	/**
 	 */
 	public function query($sql) {
-		if (! $this->link ()) return false;
+		if (! $this->link ( 'read' )) return false;
 		if (! $this->ds) $this->free ();
 		$this->ds = $this->link->prepare ( $this->sql () );
 		if ($this->ds && $this->ds->execute ()) return $this->ds->fetchAll ( PDO::FETCH_ASSOC );
@@ -554,6 +574,12 @@ class Mysql {
 	}
 	//
 }
+
+/* ********************** */
+$mysql = new Mysql ( 'mysql://root:goodwin@000@localhost:3306/html#utf8' );
+
+
+
 
 
 
