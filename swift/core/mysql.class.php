@@ -301,28 +301,28 @@ class Mysql {
 	}
 	
 	/**
+	 * protected function where(str $datas)
+	 * protected function where(array $datas=array(array(str $field, str $condition, [str $logic])...))
 	 */
 	protected function where( $datas ) {
-		if (empty( $datas ) && '0' !== $datas) return $datas;
-		elseif (is_string( $datas )) return $datas;
+		if (is_string( $datas )) return $datas;
 		elseif (is_array( $datas )) {
 			$sqls = array ();
 			foreach ( $datas as $index => $data ) {
 				if (! is_integer( $index )) return '';
 				elseif (! is_array( $data )) return '';
-				
 				foreach ( $data as $key => $value ) {
 					if (! is_integer( $key )) return '';
 					elseif (! is_string( $value )) return '';
 				}
 				switch (count( $data )) {
 					case 3 :
-						list ( $column, $condition, $logic ) = $data;
-						$sqls[] = '(' . $column . $condition . ') ' . $logic;
+						list ( $field, $condition, $logic ) = $data;
+						$sqls[] = '(' . $field . $condition . ') ' . $logic;
 						break;
 					case 2 :
-						list ( $column, $condition ) = $data;
-						$sqls[] = '(' . $column . $condition . ') and';
+						list ( $field, $condition ) = $data;
+						$sqls[] = '(' . $field . $condition . ') and';
 						break;
 					default :
 						return '';
@@ -338,12 +338,14 @@ class Mysql {
 	/**
 	 */
 	protected function group( $datas ) {
-		if (empty( $datas ) && '0' !== $datas) return '';
-		elseif (is_string( $datas )) return $datas;
+		if (is_string( $datas )) return $datas;
 		elseif (is_array( $datas )) {
 			$sqls = array ();
-			foreach ( array_filter( $datas, 'is_array' ) as $data ) {
-				foreach ( array_filter( $data, 'is_string' ) as $key => $value ) {
+			foreach ( $datas as $data ) {
+				if (! is_integer( $index )) return '';
+				elseif (! is_array( $data )) return '';
+				foreach ( $data as $key => $value ) {
+					
 					if (empty( $value )) continue;
 					elseif (is_integer( $key )) $sqls[] = $value;
 					elseif ('asc' == $value || 'desc' == $value) $sqls[] = $key . ' ' . $value;
