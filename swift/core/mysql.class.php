@@ -369,36 +369,35 @@ class Mysql {
 	}
 	
 	/**
+	 * str protected function order(str|array $datas)
 	 */
-	protected function order($datas) {
-		if (empty ( $datas ) && '0' !== $datas) return '';
+	public function order($datas) {
+		if (empty ( $datas )) return ''; // && $datas !== '0'
 		elseif (is_string ( $datas )) return $datas;
 		elseif (is_array ( $datas )) {
 			$sqls = array ();
-			foreach ( array_filter ( $datas, 'is_array' ) as $data ) {
-				foreach ( array_filter ( $data, 'is_string' ) as $key => $value ) {
-					if (empty ( $value )) continue;
-					elseif (is_integer ( $key )) $sqls [] = $value;
-					elseif ('asc' == $value || 'desc' == $value) $sqls [] = $key . ' ' . $value;
-				}
+			foreach ( array_filter ( $datas, 'is_string' ) as $key => $value ) {
+				if (empty ( $value )) continue; // && $datas !== '0'
+				elseif (is_integer ( $key )) $sqls [] = $value;
+				elseif ('asc' == $value || 'desc' == $value) $sqls [] = $key . ' ' . $value;
 			}
-			return implode ( ',' . sqls );
+			return implode ( ',', $sqls );
 		}
 		return '';
 	}
 	
 	/**
+	 * str protected function limit(str|int|array $datas)
 	 */
-	public function limit($datas) {
-		if (empty ( $datas )) return '';
-		elseif (is_string ( $datas )) return $datas;
-		elseif (is_integer ( $datas )) return ( string ) $datas;
+	protected function limit($datas) {
+		if (empty ( $datas )) return ''; // && $datas !== '0' && $datas !== 0
+		elseif (is_string ( $datas )) return 'limit ' . $datas;
+		elseif (is_integer ( $datas )) return 'limit ' . ( string ) $datas;
 		elseif (is_array ( $datas )) {
 			foreach ( $datas as $key => $value ) {
-				if (! is_integer ( $key )) return '';
-				elseif (! is_integer ( $value )) return '';
+				if (! is_integer ( $key ) || ! is_integer ( $value )) return '';
 			}
-			return count ( $datas ) <= 2 ? implode ( ',', $datas ) : '';
+			return count ( $datas ) <= 2 ? 'limit ' . implode ( ',', $datas ) : '';
 		}
 		return '';
 	}
@@ -564,7 +563,8 @@ class Mysql {
 
 /* */
 $mysql = new Mysql ( 'mysql://root:1qaz2wsx@localhost:3306/swift#utf8' );
-print_r ( $mysql->tables () );
+$datas = array ('','name' => '','sex','phone' => 'asc','workid' => 'desc' );
+echo '[' . $mysql->order ( $datas ) . ']';
 
 
 
