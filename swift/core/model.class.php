@@ -104,9 +104,9 @@ class Model {
 			}
 			if (isset ( $type ) && ! in_array ( $type, array ('inner','left','right' ) )) return $this;
 			elseif (isset ( $key1 ) && ! is_integer ( $key )) return $this;
-			elseif (! $this->format ( $r )) return $this;
-			elseif (is_string ( $rkey ) && ! $this->format ( $rkey )) return $this;
-			elseif (! $this->format ( $l )) return $this;
+			elseif (! $this->nobody2 ( $r )) return $this;
+			elseif (is_string ( $rkey ) && ! $this->nobody ( $rkey )) return $this;
+			elseif (! $this->nobody2 ( $l )) return $this;
 			elseif (is_string ( $lkey ) && ! in_array ( $rkey, array ('eq','neq' ) )) return $this;
 			elseif (isset ( $this->database->datas ['join'] ) && ! is_array ( $this->database->datas ['join'] )) unset ( $this->database->datas ['join'] );
 			$this->database->datas ['join'] [] = $datas;
@@ -268,17 +268,29 @@ class Model {
 	}
 	
 	/**
-	 * boolean protected function format(str $datas)
+	 * boolean protected function nobody(str $datas)
 	 */
-	protected function format($datas) {
-		if (! is_string ( $datas )) return false;
-		elseif ('' == $datas) return false;
-		$arr = explode ( '.', $datas );
-		foreach ( $arr as $value ) {
+	protected function nobody($datas) {
+		if(is_string($datas)){
 			$pattern = '/([a-z])|([a-z][a-z_]{0,48}[a-z])/';
-			if (! preg_match ( $pattern, $value )) return false;
+			return preg_match($pattern,$value)?true:false;
 		}
-		return true;
+		return false;
+	}
+	
+	/**
+	 * boolean protected function nobody2(str $datas)
+	 */
+	protected function nobody2($datas){
+		if(is_string($datas)){
+			$arr=explode('.',$datas`);
+			if(count($arr)!=2) return false;
+			foreach($arr as $value){
+				if(!$this->nobody($value)) return false;
+			}
+			return true;
+		}
+		return false;
 	}
 	//
 }
