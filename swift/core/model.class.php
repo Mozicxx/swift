@@ -118,6 +118,60 @@ class Model {
 	}
 	
 	/**
+	 * Model public function where(null $datas)
+	 * Model public function where(array $datas=array(str [$alias.]$field|str [$alias.]$field=>str $logic, str $operator=>str $require))
+	 * Model public function where(str $datas)
+	 */
+	public function where($datas) {
+		$sqls=&$this->database->datas;
+		if(is_null($datas)) unset($sqls['where']);
+		elseif(is_array($datas)&&2==count($datas)){
+			list($key1, $key2)=array_keys($datas);
+			list($value1, $value2)=$datas;
+			if(is_integer($key1)&&$this->nobody($value1)&&$this->nobody2($value1)) return $this;
+			elseif(is_string($key1)&&$this->nobody($key1)&&$this->nobody2($key1)) return $this;
+			elseif(is_string($key1)&&!in_array($value1, array('and','or'), true)) return $this;
+			elseif(!in_array($key2, array('eq','neq'), true)) return $this;
+			elseif(!is_scalar($value2)&&!is_null($value2)) return $this;
+			elseif (isset ($sqls ['where'] ) && ! is_array ( $sqls ['where'] )) unset ( $sqls ['where'] );
+			$sqls['where'] [] = $datas;
+		}
+		elseif(is_string($datas)&&$datas!=''){
+			unset ( $sqls ['where'] );
+			$sqls ['where'] = $datas;
+		}
+		return $this;
+	}
+	
+	/**
+	 * Model public function group(null $datas)
+	 * Model public function group(array $datas=array((str [alias.]field=>str method)|(str [alias.]field),...)
+	 * Model public function group(str $datas)
+	 */
+	public function group($datas){
+		$sqls=&$this->database->datas;
+		if(is_null($datas)) unset($sqls['group']);
+		elseif(is_array($datas)){
+			foreach($datas as $key=>$value){
+				if(is_integer($key)){
+					if($this->nobody($value)&&$this->nobody2($value)) return $this;
+				}
+				else{
+					if($this->nobody($key)&&$this->nobody2($key)) return $this;
+					elseif(!in_array($value, array('asc','desc'), true)) return $this;
+				}
+			}
+			if (isset ($sqls ['group'] ) && ! is_array ( $sqls ['group'] )) unset ( $sqls ['group'] );
+			$sqls['group'] [] = $datas;
+		}
+		elseif(is_string($datas)){
+			unset ( $sqls ['group'] );
+			$sqls ['group'] = $datas;
+		}
+		return $this;
+	}
+	
+	/**
 	 */
 	public function order($datas) {
 		if (is_string ( $datas )) {
@@ -136,39 +190,7 @@ class Model {
 		return $this;
 	}
 	
-	/**
-	 * Model public function where(null $data)
-	 * Model public function where(array $data [,str $logic='and'])
-	 * Model public function where(str $data)
-	 */
-	public function where($data, $logic = 'and') {
-		if (! is_string ( $logic )) return $this;
-		elseif (! in_array ( $logic, array ('and','or' ) )) return $this;
-		
-		if (is_null ( $data )) unset ( $this->database->datas ['where'] );
-		elseif (is_array ( $data )) {
-			if (! $this->walk ( array_keys ( $datas ), 'int' )) return $this;
-			switch (count ( $datas )) {
-				case 4 :
-					if(!$this->walks($datas, array('str','str','scalar'))
-					return $this;
-					break;
-				case 3 :
-					if(!$this->walks($datas, array('str','str','str','scalar'))
-					return $this;
-					break;
-				default :
-					return $this;
-					break;
-			}
-			$datas [] = $logic;
-			$this->database->datas ['where'] [] = $datas;
-		} elseif (is_string ( $data ) && ! empty ( $data )) {
-			unset ( $this->database->datas ['where'] );
-			$this->database->datas ['where'] = $data;
-		}
-		return $this;
-	}
+
 	
 	/**
 	 */
