@@ -5,17 +5,19 @@ namespace Swift;
 class Model {
 	protected $database = null;
 	protected $trueTabName = null;
+	protected $tableName = null;
+	protected $datas = array();
 	
 	/**
+	 * void public function __construct(str|null $tabName, str|array|null $dsn)
 	 */
-	public function __construct($name = '', $dsn = array()) {
-		if (! empty( $name ) && is_string( $name )) {
-			$this->name = $name;
-		}
+	public function __construct($tabName = null, $dsn = null) {
+		if ($this->isCamelCase( $tabName )) $this->tabName = $tabName;
 		$this->database( $dsn );
 	}
 	
 	/**
+	 * boolean public function database(null|str|array $dsn)
 	 */
 	public function database($dsn = null) {
 		if (is_null( $dsn )) $dsn = C( 'schema_dsn' );
@@ -39,156 +41,241 @@ class Model {
 	 * Model public function distinct(bool $datas)
 	 */
 	public function distinct($datas) {
-		if (is_null( $datas )) unset( $this->database->datas ['distinct'] );
-		elseif (is_bool( $datas )) $this->database->datas ['distinct'] = $datas;
+		if ($this->database) {
+			$sqls = &$this->database->datas;
+			if (is_null( $datas )) unset( $sqls ['distinct'] );
+			elseif (is_bool( $datas )) $sqls ['distinct'] = $datas;
+		}
 		return $this;
 	}
 	
 	/**
 	 * Model public function field(null $datas)
-	 * Model public function field(array $datas=array(str $field[=>str $alias],...))
+	 * Model public function field(array $datas=array(str $field|str $alias=>str $field,...))
 	 * Model public function field(str $datas)
 	 */
 	public function field($datas) {
-		if (is_null( $datas )) unset( $this->database->datas ['field'] );
-		elseif (is_array( $datas ) && ! empty( $datas )) {
-			if (! $this->walk( $datas, 'str' )) return $this;
-			elseif (isset( $this->database->datas ['field'] ) && ! is_array( $this->database->datas ['field'] )) unset( $this->database->datas ['field'] );
-			$this->database->datas ['field'] [] = $datas;
-		} elseif (is_string( $datas ) && $datas != '') {
-			unset( $this->database->datas ['field'] );
-			$this->database->datas ['field'] = $datas;
+		if ($this->database) {
+			$sqls = &$this->database->datas;
+			if (is_null( $datas )) unset( $sqls ['field'] );
+			elseif (is_array( $datas ) && ! empty( $datas )) {
+				foreach ( $datas as $key => $value ) {
+					if (! is_integer( $key ) && ! $this->nobody( $key )) return $this;
+					elseif (! $this->nobody( $value ) && ! $this->nobodyPlus( $value )) return $this;
+				}
+				if (isset( $sqls ['field'] ) && ! is_array( $sqls ['field'] )) unset( $sqls ['field'] );
+				$sqls ['field'] [] = $datas;
+			} elseif (is_string( $datas ) && $datas != '') {
+				unset( $sqls ['field'] );
+				$sqls ['field'] = $datas;
+			}
 		}
 		return $this;
 	}
 	
 	/**
 	 * Model public function table(null $datas)
-	 * Model public function table(array $datas=array(str $name[=>str $alias],...))
+	 * Model public function table(array $datas=array(str $table|str $alias=>str $table,...))
 	 * Model public function table(str $datas)
 	 */
 	public function table($datas) {
-		if (is_null( $datas )) unset( $this->database->datas ['table'] );
-		elseif (is_array( $datas ) && ! empty( $datas )) {
-			if (! $this->walk( $datas, 'str' )) return $this;
-			elseif (isset( $this->database->datas ['table'] ) && ! is_array( $this->database->datas ['table'] )) unset( $this->database->datas ['table'] );
-			$this->database->datas ['field'] [] = $datas;
-		} elseif (is_string( $datas ) && $datas != '') {
-			unset( $this->database->datas ['table'] );
-			$this->database->datas ['table'] = $datas;
+		if ($this->database) {
+			$sqls = &$this->database->datas;
+			if (is_null( $datas )) unset( $sqls ['table'] );
+			elseif (is_array( $datas ) && ! empty( $datas )) {
+				foreach ( $datas as $key => $value ) {
+					if (! is_integer( $key ) && ! $this->nobody( $key )) return $this;
+					elseif (! $this->nobody( $value )) return $this;
+				}
+				if (isset( $sqls ['table'] ) && ! is_array( $sqls ['table'] )) unset( $sqls ['table'] );
+				$sqls ['table'] [] = $datas;
+			} elseif (is_string( $datas ) && $datas != '') {
+				unset( $sqls ['table'] );
+				$sqls ['table'] = $datas;
+			}
 		}
 		return $this;
 	}
 	
 	/**
 	 * Model public function join(null $datas)
-	 * Model public function join(array $datas=array([str $type,] [str alias=>]str right.field, [str $relation=>]str left.field ))
+	 * Model public function join(array $datas=array([str $alias=>]str $r.field, [str $realtion=>]str $l.field),str $type)
+	 * Model public function join(array $datas=array([str $alias=>]str $r.field, [str $realtion=>]str $l.field))
 	 * Model public function join(str $datas)
 	 */
 	public function join($datas) {
-		if (is_null( $datas )) unset( $this->database->datas ['join'] );
-		elseif (is_array( $datas ) && ! empty( $datas )) {
-			switch (count( $datas )) {
-				case 3 :
-					list ( $type, $r, $l ) = $datas;
-					list ( $key1, $key2, $key3 ) = array_keys( $datas );
-					break;
-				case 2 :
-					list ( $r, $l ) = $datas;
-					list ( $key2, $key3 ) = array_keys( $datas );
-					break;
-				default :
-					return $this;
-					break;
+		if ($this->database) {
+			$sqls = &$this->database->datas;
+			if (is_null( $datas )) unset( $sqls ['join'] );
+			elseif (is_array( $datas ) && ! empty( $datas )) {
+				switch (count( $datas )) {
+					case 3 :
+						list ( $r, $l, $type ) = $datas;
+						list ( $key1, $key2, $key3 ) = array_keys( $datas );
+						if (! is_integer( $key3 )) return $this;
+						elseif (! in_array( $type, array( 'inner', 'left', 'right' ), true )) return $this;
+						break;
+					case 2 :
+						list ( $r, $l ) = $datas;
+						list ( $key1, $key2 ) = array_keys( $datas );
+						break;
+					default :
+						return $this;
+						break;
+				}
+				if (! is_integer( $key1 ) && ! $this->nobody( $key1 )) return $this;
+				elseif (! $this->nobodyPlus( $r )) return $this;
+				elseif (! in_array( $key2, array( 'eq', 'neq' ), true )) return $this;
+				elseif (! $this->nobodyPlus( $l )) return $this;
+				elseif (isset( $sqls ['join'] ) && ! is_array( $sqls ['join'] )) unset( $sqls ['join'] );
+				$sqls ['join'] [] = $datas;
+			} elseif (is_string( $datas ) && $datas != '') {
+				unset( $sqls ['join'] );
+				$sqls ['join'] = $datas;
 			}
-			if (isset( $type ) && ! in_array( $type, array( 'inner', 'left', 'right' ) )) return $this;
-			elseif (isset( $key1 ) && ! is_integer( $key )) return $this;
-			elseif (! $this->nobody2( $r )) return $this;
-			elseif (is_string( $rkey ) && ! $this->nobody( $rkey )) return $this;
-			elseif (! $this->nobody2( $l )) return $this;
-			elseif (is_string( $lkey ) && ! in_array( $rkey, array( 'eq', 'neq' ) )) return $this;
-			elseif (isset( $this->database->datas ['join'] ) && ! is_array( $this->database->datas ['join'] )) unset( $this->database->datas ['join'] );
-			$this->database->datas ['join'] [] = $datas;
-		} elseif (is_string( $datas ) && $datas != '') {
-			unset( $this->database->datas ['join'] );
-			$this->database->datas ['join'] = $datas;
 		}
 		return $this;
 	}
 	
 	/**
 	 * Model public function where(null $datas)
-	 * Model public function where(array $datas=array(str [$alias.]$field|str [$alias.]$field=>str $logic, str $operator=>str $require))
+	 * Model public function where(array $datas=array([str $logic=>]str [$alias.]$field, [str $operator=>]scalar $require))
 	 * Model public function where(str $datas)
 	 */
 	public function where($datas) {
-		$sqls = &$this->database->datas;
-		if (is_null( $datas )) unset( $sqls ['where'] );
-		elseif (is_array( $datas ) && 2 == count( $datas )) {
-			list ( $key1, $key2 ) = array_keys( $datas );
-			list ( $value1, $value2 ) = $datas;
-			if (is_integer( $key1 ) && $this->nobody( $value1 ) && $this->nobody2( $value1 )) return $this;
-			elseif (is_string( $key1 ) && $this->nobody( $key1 ) && $this->nobody2( $key1 )) return $this;
-			elseif (is_string( $key1 ) && ! in_array( $value1, array( 'and', 'or' ), true )) return $this;
-			elseif (! in_array( $key2, array( 'eq', 'neq' ), true )) return $this;
-			elseif (! is_scalar( $value2 ) && ! is_null( $value2 )) return $this;
-			elseif (isset( $sqls ['where'] ) && ! is_array( $sqls ['where'] )) unset( $sqls ['where'] );
-			$sqls ['where'] [] = $datas;
-		} elseif (is_string( $datas ) && $datas != '') {
-			unset( $sqls ['where'] );
-			$sqls ['where'] = $datas;
+		if ($this->database) {
+			$sqls = &$this->database->datas;
+			if (is_null( $datas )) unset( $sqls ['where'] );
+			elseif (is_array( $datas ) && ! empty( $datas )) {
+				switch (count( $datas )) {
+					case 2 :
+						list ( $key1, $key2 ) = array_keys( $datas );
+						list ( $field, $require ) = $datas;
+						break;
+					default :
+						return $this;
+						break;
+				}
+				if (! is_integer( $key1 ) && ! in_array( $key1, array( 'and', 'or' ), true )) return $this;
+				elseif (! $this->nobody( $field ) && ! $this->nobodyPlus( $field )) return $this;
+				elseif (! is_integer( $key2 ) && ! in_array( $key2, array( 'eq', 'neq' ), true )) return $this;
+				elseif (! is_scalar( $require ) && ! is_null( $require )) return $this;
+				elseif (isset( $sqls ['where'] ) && ! is_array( $sqls ['where'] )) unset( $sqls ['where'] );
+				$sqls ['where'] [] = $datas;
+			} elseif (is_string( $datas ) && $datas != '') {
+				unset( $sqls ['where'] );
+				$sqls ['where'] = $datas;
+			}
 		}
 		return $this;
 	}
 	
 	/**
 	 * Model public function group(null $datas)
-	 * Model public function group(array $datas=array((str [alias.]field=>str method)|(str [alias.]field),...)
+	 * Model public function group(array $datas=array(str [$alias.]$field[=>str $type],...)
 	 * Model public function group(str $datas)
 	 */
 	public function group($datas) {
-		$sqls = &$this->database->datas;
-		if (is_null( $datas )) unset( $sqls ['group'] );
-		elseif (is_array( $datas )) {
-			foreach ( $datas as $key => $value ) {
-				if (is_integer( $key )) {
-					if ($this->nobody( $value ) && $this->nobody2( $value )) return $this;
-				} else {
-					if ($this->nobody( $key ) && $this->nobody2( $key )) return $this;
-					elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
+		if ($this->database) {
+			$sqls = &$this->database->datas;
+			if (is_null( $datas )) unset( $sqls ['group'] );
+			elseif (is_array( $datas ) && ! empty( $datas )) {
+				foreach ( $datas as $key => $value ) {
+					if (is_integer( $key )) {
+						if (! $this->nobody( $value ) && ! $this->nobodyPlus( $value )) return $this;
+					} else {
+						if (! $this->nobody( $key ) && ! $this->nobodyPlus( $key )) return $this;
+						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
+					}
 				}
+				if (isset( $sqls ['group'] ) && ! is_array( $sqls ['group'] )) unset( $sqls ['group'] );
+				$sqls ['group'] [] = $datas;
+			} elseif (is_string( $datas ) && $datas != '') {
+				unset( $sqls ['group'] );
+				$sqls ['group'] = $datas;
 			}
-			if (isset( $sqls ['group'] ) && ! is_array( $sqls ['group'] )) unset( $sqls ['group'] );
-			$sqls ['group'] [] = $datas;
-		} elseif (is_string( $datas )) {
-			unset( $sqls ['group'] );
-			$sqls ['group'] = $datas;
 		}
 		return $this;
 	}
 	
 	/**
+	 * Model public function order(null $datas)
+	 * Model public function order(array $datas=array([str $alias.]$field[=>str $type],...))
+	 * Model public function order(str $datas)
 	 */
 	public function order($datas) {
-		if (is_string( $datas )) {
-			$this->database->datas ['order'] = $datas;
-		} elseif (is_array( $datas )) {
-			$this->database->datas ['order'] [] = $datas;
+		if ($this->database) {
+			$sqls = &$this->database->datas;
+			if (is_null( $datas )) unset( $sqls ['order'] );
+			elseif (is_array( $datas ) && ! empty( $datas )) {
+				foreach ( $datas as $key => $value ) {
+					if (is_integer( $key )) {
+						if (! $this->nobody( $value ) && ! $this->nobodyPlus( $value )) return $this;
+					} else {
+						if (! $this->nobody( $key ) && ! $this->nobodyPlus( $key )) return $this;
+						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
+					}
+				}
+				if (isset( $sqls ['order'] ) && ! is_array( $sqls ['order'] )) unset( $sqls ['order'] );
+				$sqls ['order'] [] = $datas;
+			} elseif (is_string( $datas ) && $datas != '') {
+				unset( $sqls ['order'] );
+				$sqls ['order'] = $datas;
+			}
+		}
+		return $this;
+	}
+	
+	/**
+	 * Model public function limit(null $datas)
+	 * Model public function limit(array $datas=array(int $offset, int $row))
+	 * Model public function limit(int $datas)
+	 * Model public function limit(str $datas)
+	 */
+	public function limit($datas) {
+		if ($this->database) {
+			$sqls = &$this->database->datas;
+			if (is_null( $datas )) unset( $sqls ['limit'] );
+			elseif (is_array( $datas ) && ! empty( $datas )) {
+				switch (count( $datas )) {
+					case 2 :
+						list ( $key1, $key2 ) = array_keys( $datas );
+						list($offset, $row)=$datas
+						break;
+					default :
+						return $this;
+						break;
+				}
+				if ($key1 !== 0) return $this;
+				elseif ($key2 !== 1) return $this;
+				elseif (! is_integer( $offset )) return $this;
+				elseif (! is_integer( $row )) return $this;
+				unset( $sqls ['order'] );
+				$sqls ['order'] = $datas;
+			} elseif (is_integer( $datas )) {
+				unset( $sqls ['limit'] );
+				$sqls ['limit'] = $datas;
+			} elseif (is_string( $datas ) && $datas != '') {
+				unset( $sqls ['limit'] );
+				$sqls ['limit'] = $datas;
+			}
 		}
 		return $this;
 	}
 	
 	/**
 	 */
-	public function limit($datas) {
-		unset( $this->database->datas ['limit'] );
-		$this->database->datas ['limit'] = $datas;
-		return $this;
-	}
 	
-	/**
-	 */
 	public function create() {
+		$datas = $_POST;
+		$regulars = array();
+		foreach ( $datas as $key => $value ) {
+			if (! $this->isCamelCase( $key )) continue;
+			elseif (! is_scalar( $value ) && ! is_null( $value )) continue;
+			$regulars [$key] = $value;
+		}
+		$this->datas = $regulars;
+		return $this;
 	}
 	
 	/**
@@ -317,9 +404,9 @@ class Model {
 	}
 	
 	/**
-	 * boolean protected function nobody2(str $datas)
+	 * boolean protected function nobodyPlus(str $datas)
 	 */
-	protected function nobody2($datas) {
+	protected function nobodyPlus($datas) {
 		if (is_string( $datas )) {
 			$arr = explode( '.', $datas );
 			if (count( $arr ) != 2) return false;
@@ -389,6 +476,20 @@ class Model {
 			$pattern = '/([A-Z])/';
 			$replace = '_$1';
 			return strtolower( preg_replace( $pattern, $replace, $prop ) );
+		}
+		return false;
+	}
+	
+	/**
+	 * boolean protected function isNaturalSequence(array $datas)
+	 */
+	protected function isNaturalSequence($datas) {
+		if (is_array( $datas ) && ! empty( $datas )) {
+			$keys = array_filter( array_keys( $datas ), 'is_integer' );
+			foreach ( $keys as $key => $value ) {
+				if ($key != $value) return false;
+			}
+			return true;
 		}
 		return false;
 	}
