@@ -1,7 +1,7 @@
 <?php
 
-$_POST['myname']=array('luna','nig');
-print_r($_POST['myname']);
+$arr=array('zhagnsan',false=>'lisi','wagnwu');
+print_r($arr);
 
 
 					
