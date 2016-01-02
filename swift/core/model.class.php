@@ -113,11 +113,7 @@ class Model {
 						list ( $r, $l, $type ) = $datas;
 						list ( $key1, $key2, $key3 ) = array_keys( $datas );
 						if (! is_integer( $key3 )) return $this;
-						elseif (! in_array( $type, array( 
-							'inner', 
-							'left', 
-							'right' 
-						), true )) return $this;
+						elseif (! in_array( $type, array( 'inner', 'left', 'right' ), true )) return $this;
 						break;
 					case 2 :
 						list ( $r, $l ) = $datas;
@@ -129,10 +125,7 @@ class Model {
 				}
 				if (! is_integer( $key1 ) && ! $this->nobody( $key1 )) return $this;
 				elseif (! $this->nobodyPlus( $r )) return $this;
-				elseif (! in_array( $key2, array( 
-					'eq', 
-					'neq' 
-				), true )) return $this;
+				elseif (! in_array( $key2, array( 'eq', 'neq' ), true )) return $this;
 				elseif (! $this->nobodyPlus( $l )) return $this;
 				elseif (isset( $sqls ['join'] ) && ! is_array( $sqls ['join'] )) unset( $sqls ['join'] );
 				$sqls ['join'] [] = $datas;
@@ -163,15 +156,9 @@ class Model {
 						return $this;
 						break;
 				}
-				if (! is_integer( $key1 ) && ! in_array( $key1, array( 
-					'and', 
-					'or' 
-				), true )) return $this;
+				if (! is_integer( $key1 ) && ! in_array( $key1, array( 'and', 'or' ), true )) return $this;
 				elseif (! $this->nobody( $field ) && ! $this->nobodyPlus( $field )) return $this;
-				elseif (! is_integer( $key2 ) && ! in_array( $key2, array( 
-					'eq', 
-					'neq' 
-				), true )) return $this;
+				elseif (! is_integer( $key2 ) && ! in_array( $key2, array( 'eq', 'neq' ), true )) return $this;
 				elseif (! is_scalar( $require ) && ! is_null( $require )) return $this;
 				elseif (isset( $sqls ['where'] ) && ! is_array( $sqls ['where'] )) unset( $sqls ['where'] );
 				$sqls ['where'] [] = $datas;
@@ -198,10 +185,7 @@ class Model {
 						if (! $this->nobody( $value ) && ! $this->nobodyPlus( $value )) return $this;
 					} else {
 						if (! $this->nobody( $key ) && ! $this->nobodyPlus( $key )) return $this;
-						elseif (! in_array( $value, array( 
-							'asc', 
-							'desc' 
-						), true )) return $this;
+						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
 					}
 				}
 				if (isset( $sqls ['group'] ) && ! is_array( $sqls ['group'] )) unset( $sqls ['group'] );
@@ -229,10 +213,7 @@ class Model {
 						if (! $this->nobody( $value ) && ! $this->nobodyPlus( $value )) return $this;
 					} else {
 						if (! $this->nobody( $key ) && ! $this->nobodyPlus( $key )) return $this;
-						elseif (! in_array( $value, array( 
-							'asc', 
-							'desc' 
-						), true )) return $this;
+						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
 					}
 				}
 				if (isset( $sqls ['order'] ) && ! is_array( $sqls ['order'] )) unset( $sqls ['order'] );
@@ -285,8 +266,38 @@ class Model {
 	/**
 	 * array public function create([array $fields=array(string $field,...)])
 	 */
-	public function create($fields = null) {
+	public function create($fields = array()) {
 		$this->clear();
+		if (! is_array( $fields )) return $this->datas;
+		elseif (! empty( $fields )) {
+			if (! $this->isIntSeq( array_keys( $fields ), true )) return $this->datas;
+			elseif (! $this->isStrSeq( array_values( $fields ) )) return $this->datas;
+		} elseif (! empty( $_POST )) {
+			$datas = $_POST;
+			foreach ( $datas as $key => &$value ) {
+				if (! empty( $fields && ! in_array( $key, $fields, true ) )) unset( $value );
+				elseif (! $this->isBetter( $key )) unset( $value );
+				elseif (! is_string( $value ) && ! is_array( $value )) unset( $value );
+				elseif (is_array( $value )) {
+					if (empty( $value )) unset( $value );
+					elseif (! $this->isIntSeq( array_keys( $value ), true )) unset( $value );
+					elseif (! $this->isStrSeq( array_values( $value ) )) unset( $value );
+					$value = implode( '{}', $value );
+				}
+			}
+			if ($this->name && $this->database) {
+				$fields = $this->database->fields( $this->name );
+				if ($fields) {
+					$names = array_keys( $fields );
+					foreach ( $datas as $key => &$value ) {
+						if (! in_array( $key, $names, true )) unset( $value );
+						$value = $this->changeDataType( $value, $this->mapDataType( $fields [$key] ['type'] ) );
+					}
+				}
+			}
+			$this->datas = $datas;
+		}
+		return $this->datas;
 	}
 	
 	/**
@@ -318,41 +329,6 @@ class Model {
 	 */
 	public function clear() {
 		$this->datas = array();
-	}
-	
-	/**
-	 * string protected function dataType(scalar $data)
-	 */
-	protected function dataType($data) {
-		if (is_string( $data )) return 'string';
-		elseif (is_integer( $data )) return 'integer';
-		elseif (is_float( $data )) return 'float';
-		elseif (is_bool( $data )) return 'boolean';
-		elseif (is_null( $data )) return 'null';
-		return '';
-	}
-	
-	/**
-	 * array protectred function mapDataType(string $type)
-	 */
-	protected function mapDataType($type) {
-		if (is_string( $type )) {
-			$maps = array( 
-				'string' => array(), 
-				'integer' => array( 
-					'tinyint', 
-					'smallint', 
-					'int', 
-					'mediumint', 
-					'bigint' 
-				), 
-				'float' => array(), 
-				'boolean' => array(), 
-				'null' => null 
-			);
-			return in_array( $type, array_keys( $maps ), true ) ? $maps [$type] : array();
-		}
-		return array();
 	}
 	
 	/**
@@ -525,10 +501,7 @@ class Model {
 	protected function ddb($datas) {
 		if (is_array( $datas ) && ! empty( $datas )) {
 			foreach ( $datas as $index => $data ) {
-				if (! in_array( $index, array( 
-					'reads', 
-					'writes' 
-				), true )) return false;
+				if (! in_array( $index, array( 'reads', 'writes' ), true )) return false;
 				elseif (! is_array( $data )) return false;
 				elseif (empty( $data )) return false;
 				foreach ( $data as $key => $value ) {
@@ -547,14 +520,7 @@ class Model {
 	protected function dsn($datas) {
 		if (is_array( $datas ) && ! empty( $datas )) {
 			foreach ( $datas as $key => $value ) {
-				if (! in_array( $key, array( 
-					'host', 
-					'port', 
-					'user', 
-					'pwd', 
-					'database', 
-					'charset' 
-				), true )) return false;
+				if (! in_array( $key, array( 'host', 'port', 'user', 'pwd', 'database', 'charset' ), true )) return false;
 				elseif ('port' == $value && ! is_integer( $value )) return false;
 				elseif (! is_string( $value )) return false;
 			}
@@ -644,13 +610,93 @@ class Model {
 		}
 		return false
 	}
+	
+	/**
+	 * boolean|string protected function getDataType(scalar $data)
+	 */
+	protected function dataType($data) {
+		if (is_string( $data )) return 'string';
+		elseif (is_integer( $data )) return 'integer';
+		elseif (is_float( $data )) return 'float';
+		elseif (is_bool( $data )) return 'boolean';
+		elseif (is_null( $data )) return 'null';
+		return false;
+	}
+	
+	/**
+	 * boolean|string protected function mapDataType(string $type)
+	 */
+	protected function mapDataType($type) {
+		if (is_string( $type ) && $type != '') {
+			$maps = array( 'string' => array( 'char', 'varchar', 'binary', 'varbinary', 'tinyblob', 'blob', 'mediumblob', 'longblob', 'tinytext', 'text', 'mediumtext', 'longtext', 'date', 'datetime', 'timestamp', 'time', 'year', 'bit' ), 'integer' => array( 'tinyint', 'smallint', 'int', 'mediumint', 'bigint' ), 'float' => array( 'decimal', 'float', 'double' ), 'boolean' => array( 'bool' ), 'null' => array() );
+			foreach ( $maps as $index => $map ) {
+				if (in_array( $type, $map, true )) return $index;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * mixed protected function changeDataType(scalar $data, string $type)
+	 */
+	protected function changeDataType($data, $type) {
+		if (! is_scalar( $data ) && ! is_null( $data )) return $data;
+		elseif (! is_string( $type ) or '' == $type) return $data;
+		switch ($data) {
+			case 'string' :
+				return ( string ) $data;
+				break;
+			case 'integer' :
+				return ( integer ) $data;
+				break;
+			case 'float' :
+				return ( float ) $data;
+				break
+			case 'boolean' :
+				return ( boolean ) $data;
+				break;
+			case 'null' :
+				return ( unset ) $data;
+				break;
+			default :
+				return $data;
+				break;
+		}
+	}
+	
+	/**
+	 * boolean protected function isIntSeq(array $datas, boolean $mode)
+	 * boolean protected function isIntSeq(array $datas)
+	 */
+	protected function isIntSeq($datas, $mode = false) {
+		if (! is_array( $datas ) or empty( $data )) return false;
+		elseif (! is_bool( $mode )) return false;
+		$values = $mode ? array_filter( array_values( $datas ), 'is_integer' ) : array_values( $datas );
+		foreach ( $values as $key => $value ) {
+			if ($key != $value) return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * boolean protected function isStrSeq(array $datas, boolean $mode)
+	 * boolean protected function isStrSeq(array $datas)
+	 */
+	protected function isStrSeq($datas, $mode = false) {
+		if (! is_array( $datas ) or empty( $data )) return false;
+		elseif (! is_bool( $mode )) return false;
+		$values = array_values( $datas );
+		foreach ( $values as $value ) {
+			if (! is_string( $value )) return false;
+			elseif ($mode && '' == $value) return false;
+		}
+		return true;
+	}
 	//
 }
 
 $m = new Model();
-$datas = array( 
-	12 
-);
+$datas = array( 12 );
 print_r( $m->add( $datas ) );
 
 
