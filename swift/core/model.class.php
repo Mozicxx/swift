@@ -17,28 +17,27 @@ class Model {
 	}
 	
 	/**
-	 * boolean public function database(null|str|array $dsn)
+	 * boolean public function database([null $dsn])
+	 * boolean public function database(array $dsn=array(string $key=>string|integer $value,...)|array('reads'=>array(...), 'writes'=>array(...)))
+	 * boolean public function database(string $dsn)
 	 */
 	public function database($dsn = null) {
-		if (is_null( $dsn )) $dsn = C( 'schema_dsn' );
-		elseif (is_string( $dsn ) && $dsn != '') $dsn = C( '$dsn' );
+		if (is_null( $dsn )) $dsn = C( 'database_dsn' );
+		elseif (is_string( $dsn ) && $dsn != '') $dsn = C( $dsn );
 		
-		if (is_array( $dsn )) {
-			if (! $this->single( $dsn ) && ! $this->ddb( $dsn )) return false;
-			
-			if ($this->database) {
-				$this->database->close();
-				unset( $this->database );
-			}
-			$this->database = new \Swift\Mysql( $dsn );
-			return $this->database ? true : false;
+		if (! is_array( $dsn ) or empty( $dsn )) return false;
+		elseif (! $this->isSingleDsn( $dsn ) && ! $this->isDdbDsn( $dsn )) return false;
+		elseif ($this->database) {
+			$this->database->close();
+			$this->database = null;
 		}
-		return false;
+		$this->database = new \Swift\Mysql( $dsn );
+		return $this->database ? true : false;
 	}
 	
 	/**
 	 * Model public function distinct(null $datas)
-	 * Model public function distinct(bool $datas)
+	 * Model public function distinct(boolean $datas)
 	 */
 	public function distinct($datas) {
 		if ($this->database) {
@@ -51,7 +50,7 @@ class Model {
 	
 	/**
 	 * Model public function field(null $datas)
-	 * Model public function field(array $datas=array(str $field|str $alias=>str $field,...))
+	 * Model public function field(array $datas=array([string $alias=>]string $field,...))
 	 * Model public function field(str $datas)
 	 */
 	public function field($datas) {
@@ -59,9 +58,10 @@ class Model {
 			$sqls = &$this->database->datas;
 			if (is_null( $datas )) unset( $sqls ['field'] );
 			elseif (is_array( $datas ) && ! empty( $datas )) {
+				if (! $this->isIntSeq( array_keys( $datas ) )) return $this;
 				foreach ( $datas as $key => $value ) {
-					if (! is_integer( $key ) && ! $this->nobody( $key )) return $this;
-					elseif (! $this->nobody( $value ) && ! $this->nobodyPlus( $value )) return $this;
+					if (! is_integer( $key ) && ! $this->isDbRegular( $key )) return $this;
+					elseif (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
 				}
 				if (isset( $sqls ['field'] ) && ! is_array( $sqls ['field'] )) unset( $sqls ['field'] );
 				$sqls ['field'] [] = $datas;
@@ -84,8 +84,8 @@ class Model {
 			if (is_null( $datas )) unset( $sqls ['table'] );
 			elseif (is_array( $datas ) && ! empty( $datas )) {
 				foreach ( $datas as $key => $value ) {
-					if (! is_integer( $key ) && ! $this->nobody( $key )) return $this;
-					elseif (! $this->nobody( $value )) return $this;
+					if (! is_integer( $key ) && ! $this->isDbRegular( $key )) return $this;
+					elseif (! $this->isDbRegular( $value )) return $this;
 				}
 				if (isset( $sqls ['table'] ) && ! is_array( $sqls ['table'] )) unset( $sqls ['table'] );
 				$sqls ['table'] [] = $datas;
@@ -123,10 +123,10 @@ class Model {
 						return $this;
 						break;
 				}
-				if (! is_integer( $key1 ) && ! $this->nobody( $key1 )) return $this;
-				elseif (! $this->nobodyPlus( $r )) return $this;
+				if (! is_integer( $key1 ) && ! $this->isDbRegular( $key1 )) return $this;
+				elseif (! $this->isDbRegularPlus( $r )) return $this;
 				elseif (! in_array( $key2, array( 'eq', 'neq' ), true )) return $this;
-				elseif (! $this->nobodyPlus( $l )) return $this;
+				elseif (! $this->isDbRegularPlus( $l )) return $this;
 				elseif (isset( $sqls ['join'] ) && ! is_array( $sqls ['join'] )) unset( $sqls ['join'] );
 				$sqls ['join'] [] = $datas;
 			} elseif (is_string( $datas ) && $datas != '') {
@@ -157,7 +157,7 @@ class Model {
 						break;
 				}
 				if (! is_integer( $key1 ) && ! in_array( $key1, array( 'and', 'or' ), true )) return $this;
-				elseif (! $this->nobody( $field ) && ! $this->nobodyPlus( $field )) return $this;
+				elseif (! $this->isDbRegular( $field ) && ! $this->isDbRegularPlus( $field )) return $this;
 				elseif (! is_integer( $key2 ) && ! in_array( $key2, array( 'eq', 'neq' ), true )) return $this;
 				elseif (! is_scalar( $require ) && ! is_null( $require )) return $this;
 				elseif (isset( $sqls ['where'] ) && ! is_array( $sqls ['where'] )) unset( $sqls ['where'] );
@@ -182,9 +182,9 @@ class Model {
 			elseif (is_array( $datas ) && ! empty( $datas )) {
 				foreach ( $datas as $key => $value ) {
 					if (is_integer( $key )) {
-						if (! $this->nobody( $value ) && ! $this->nobodyPlus( $value )) return $this;
+						if (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
 					} else {
-						if (! $this->nobody( $key ) && ! $this->nobodyPlus( $key )) return $this;
+						if (! $this->isDbRegular( $key ) && ! $this->isDbRegularPlus( $key )) return $this;
 						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
 					}
 				}
@@ -210,9 +210,9 @@ class Model {
 			elseif (is_array( $datas ) && ! empty( $datas )) {
 				foreach ( $datas as $key => $value ) {
 					if (is_integer( $key )) {
-						if (! $this->nobody( $value ) && ! $this->nobodyPlus( $value )) return $this;
+						if (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
 					} else {
-						if (! $this->nobody( $key ) && ! $this->nobodyPlus( $key )) return $this;
+						if (! $this->isDbRegular( $key ) && ! $this->isDbRegularPlus( $key )) return $this;
 						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
 					}
 				}
@@ -332,6 +332,11 @@ class Model {
 	}
 	
 	/**
+	 */
+	public function validate() {
+	}
+	
+	/**
 	 * boolean|array public function select()
 	 */
 	public function select() {
@@ -446,29 +451,25 @@ class Model {
 	// }
 	
 	/**
-	 * boolean protected function nobody(str $datas)
+	 * boolean protected function isDbRegular(string $data)
 	 */
-	protected function nobody($datas) {
-		if (is_string( $datas )) {
-			$pattern = '/([a-z])|([a-z][a-z_]{0,48}[a-z])/';
-			return preg_match( $pattern, $value ) ? true : false;
-		}
-		return false;
+	protected function isDbRegular($data) {
+		if (! is_string( $data )) return false;
+		$pattern = '/([a-z]+_)*[a-z]+/';
+		return preg_match( $pattern, $data ) ? true : false;
 	}
 	
 	/**
-	 * boolean protected function nobodyPlus(str $datas)
+	 * boolean protected function isDbRegularPlus(string $data)
 	 */
-	protected function nobodyPlus($datas) {
-		if (is_string( $datas )) {
-			$arr = explode( '.', $datas );
-			if (count( $arr ) != 2) return false;
-			foreach ( $arr as $value ) {
-				if (! $this->nobody( $value )) return false;
-			}
-			return true;
+	protected function isDbRegularPlus($data) {
+		if (! is_string( $data )) return $false;
+		$arr = explode( '.', $data );
+		if (count( $arr ) != 2) return false;
+		foreach ( $arr as $value ) {
+			if (! $this->isDbRegular( $value )) return false;
 		}
-		return false;
+		return true;
 	}
 	
 	/**
@@ -489,44 +490,39 @@ class Model {
 	}
 	
 	/**
-	 * boolean protected function single(array $datas)
+	 * boolean protected function isSingleDsn(array $datas=array(string $key=>string|integer $value,...))
 	 */
-	protected function single($datas) {
-		return $this->dsn( $datas );
+	protected function isSingleDsn($datas) {
+		return $this->isDsn( $datas );
 	}
 	
 	/**
-	 * boolean protected function ddb(array $datas)
+	 * boolean protected function isDistributedDsn(array $datas=array('reads'=>array(...),'writes'=>array(...)))
 	 */
-	protected function ddb($datas) {
-		if (is_array( $datas ) && ! empty( $datas )) {
-			foreach ( $datas as $index => $data ) {
-				if (! in_array( $index, array( 'reads', 'writes' ), true )) return false;
-				elseif (! is_array( $data )) return false;
-				elseif (empty( $data )) return false;
-				foreach ( $data as $key => $value ) {
-					if (! is_integer( $key )) return false;
-					elseif (! $this->dsn( $value )) return false
-				}
+	protected function isDistributedDsn($datas) {
+		if (! is_array( $datas ) or empty( $datas )) return false;
+		foreach ( $datas as $index => $data ) {
+			if (! in_array( $index, array( 'reads', 'writes' ), true )) return false;
+			elseif (! is_array( $data ) or empty( $data )) return false;
+			elseif (! $this->isIntSeq( array_keys( $data ), true )) return false;
+			foreach ( $data as $value ) {
+				if (! $this->isDsn( $value )) return false;
 			}
-			return true;
 		}
-		return false;
+		return true;
 	}
 	
 	/**
-	 * boolean protected function dsn(array $datas)
+	 * boolean protected function isDsn(array $datas=array(string $key=>string|integer $value,...))
 	 */
-	protected function dsn($datas) {
-		if (is_array( $datas ) && ! empty( $datas )) {
-			foreach ( $datas as $key => $value ) {
-				if (! in_array( $key, array( 'host', 'port', 'user', 'pwd', 'database', 'charset' ), true )) return false;
-				elseif ('port' == $value && ! is_integer( $value )) return false;
-				elseif (! is_string( $value )) return false;
-			}
-			return true;
+	protected function isDsn($datas) {
+		if (! is_array( $datas ) or empty( $datas )) return false;
+		foreach ( $datas as $key => $value ) {
+			if (! in_array( $key, array( 'type', 'host', 'port', 'user', 'pwd', 'database', 'charset' ), true )) return false;
+			elseif ('port' == $value && ! is_integer( $value )) return false;
+			elseif (! is_string( $value ) or '' == $value) return false;
 		}
-		return false;
+		return true;
 	}
 	
 	/**
@@ -694,27 +690,4 @@ class Model {
 	}
 	//
 }
-
-$m = new Model();
-$datas = array( 12 );
-print_r( $m->add( $datas ) );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

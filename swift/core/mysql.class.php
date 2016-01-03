@@ -561,32 +561,5 @@ class Mysql {
 	//
 }
 
-/* */
-$mysql = new Mysql( 'mysql://root:1qaz2wsx@localhost:3306/swift#utf8' );
-$datas = array( array( 'p', 'name', 'eq', 12, 'and' ),array('p','price','eq',34.129,'or') );
-echo '[' . $mysql->where( $datas ) . ']';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
