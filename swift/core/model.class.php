@@ -51,7 +51,7 @@ class Model {
 	/**
 	 * Model public function field(null $datas)
 	 * Model public function field(array $datas=array([string $alias=>]string $field,...))
-	 * Model public function field(str $datas)
+	 * Model public function field(string $datas)
 	 */
 	public function field($datas) {
 		if ($this->database) {
@@ -60,23 +60,20 @@ class Model {
 			elseif (is_array( $datas ) && ! empty( $datas )) {
 				if (! $this->isIntSeq( array_keys( $datas ) )) return $this;
 				foreach ( $datas as $key => $value ) {
-					if (! is_integer( $key ) && ! $this->isDbRegular( $key )) return $this;
+					if (!is_integer($key) && !$this->isDbRegular( $key )) return $this;
 					elseif (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
 				}
 				if (isset( $sqls ['field'] ) && ! is_array( $sqls ['field'] )) unset( $sqls ['field'] );
 				$sqls ['field'] [] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') {
-				unset( $sqls ['field'] );
-				$sqls ['field'] = $datas;
-			}
+			} elseif (is_string( $datas ) && $datas != '') $sqls ['field'] = $datas;
 		}
 		return $this;
 	}
 	
 	/**
 	 * Model public function table(null $datas)
-	 * Model public function table(array $datas=array(str $table|str $alias=>str $table,...))
-	 * Model public function table(str $datas)
+	 * Model public function table(array $datas=array([string $alias=>]string $table,...))
+	 * Model public function table(string $datas)
 	 */
 	public function table($datas) {
 		if ($this->database) {
@@ -89,19 +86,16 @@ class Model {
 				}
 				if (isset( $sqls ['table'] ) && ! is_array( $sqls ['table'] )) unset( $sqls ['table'] );
 				$sqls ['table'] [] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') {
-				unset( $sqls ['table'] );
-				$sqls ['table'] = $datas;
-			}
+			} elseif (is_string( $datas ) && $datas != '')  $sqls ['table'] = $datas;
 		}
 		return $this;
 	}
 	
 	/**
 	 * Model public function join(null $datas)
-	 * Model public function join(array $datas=array([str $alias=>]str $r.field, [str $realtion=>]str $l.field),str $type)
-	 * Model public function join(array $datas=array([str $alias=>]str $r.field, [str $realtion=>]str $l.field))
-	 * Model public function join(str $datas)
+	 * Model public function join(array $datas=array([string $alias=>]string $r.field, [string $realtion=>]string $l.field), string $type)
+	 * Model public function join(array $datas=array([string $alias=>]string $r.field, [string $realtion=>]string $l.field))
+	 * Model public function join(string $datas)
 	 */
 	public function join($datas) {
 		if ($this->database) {
@@ -129,10 +123,7 @@ class Model {
 				elseif (! $this->isDbRegularPlus( $l )) return $this;
 				elseif (isset( $sqls ['join'] ) && ! is_array( $sqls ['join'] )) unset( $sqls ['join'] );
 				$sqls ['join'] [] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') {
-				unset( $sqls ['join'] );
-				$sqls ['join'] = $datas;
-			}
+			} elseif (is_string( $datas ) && $datas != '')  $sqls ['join'] = $datas;
 		}
 		return $this;
 	}
@@ -147,15 +138,9 @@ class Model {
 			$sqls = &$this->database->datas;
 			if (is_null( $datas )) unset( $sqls ['where'] );
 			elseif (is_array( $datas ) && ! empty( $datas )) {
-				switch (count( $datas )) {
-					case 2 :
-						list ( $key1, $key2 ) = array_keys( $datas );
-						list ( $field, $require ) = $datas;
-						break;
-					default :
-						return $this;
-						break;
-				}
+				if(count($datas)!=2) return false;
+				list ( $key1, $key2 ) = array_keys( $datas );
+				list ( $field, $require ) = $datas;
 				if (! is_integer( $key1 ) && ! in_array( $key1, array( 'and', 'or' ), true )) return $this;
 				elseif (! $this->isDbRegular( $field ) && ! $this->isDbRegularPlus( $field )) return $this;
 				elseif (! is_integer( $key2 ) && ! in_array( $key2, array( 'eq', 'neq' ), true )) return $this;
@@ -182,13 +167,13 @@ class Model {
 			elseif (is_array( $datas ) && ! empty( $datas )) {
 				foreach ( $datas as $key => $value ) {
 					if (is_integer( $key )) {
-						if (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
+						if (! $this->isDbRegular ( $value ) && ! $this->isDbRegularPlus ( $value )) return $this;
 					} else {
-						if (! $this->isDbRegular( $key ) && ! $this->isDbRegularPlus( $key )) return $this;
-						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
+						if (! $this->isDbRegular ( $key ) && ! $this->isDbRegularPlus ( $key )) return $this;
+						elseif (! in_array ( $value, array ('asc','desc' ), true )) return $this;
 					}
 				}
-				if (isset( $sqls ['group'] ) && ! is_array( $sqls ['group'] )) unset( $sqls ['group'] );
+				if (isset ( $sqls ['group'] ) && ! is_array( $sqls ['group'] )) unset( $sqls ['group'] );
 				$sqls ['group'] [] = $datas;
 			} elseif (is_string( $datas ) && $datas != '') {
 				unset( $sqls ['group'] );
@@ -196,6 +181,12 @@ class Model {
 			}
 		}
 		return $this;
+	}
+	
+	/**
+	 */
+	public function having(){
+		
 	}
 	
 	/**

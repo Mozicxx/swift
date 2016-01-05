@@ -1,5 +1,3 @@
 <?php
 
-$arr=explode('.','.');
-var_dump($arr);
-		
+is_array($arr);
