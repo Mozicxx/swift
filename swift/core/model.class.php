@@ -324,13 +324,13 @@ class Model {
 	}
 	
 	/**
-	 * array public function data(array $datas=array(str $field=>scalar $value,...))
+	 * array public function data(array $datas=array(string $field=>scalar $value,...))
 	 */
 	public function data($datas) {
 		$this->clear();
 		if (is_array( $datas ) && ! empty( $datas )) {
 			foreach ( $datas as $key => &$value ) {
-				if (! $this->isLowerCamelCase( $key )) unset( $value );
+				if (! $this->isCamelCaseRegular( $key )) unset( $value );
 				elseif (! is_scalar( $value ) && ! is_null( $value )) unset( $value );
 			}
 			if (! empty( $datas ) && $this->name && $this->database) {
