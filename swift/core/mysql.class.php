@@ -292,7 +292,7 @@ class Mysql {
 		if (empty( $datas )) return '';
 		elseif (is_string( $datas )) return 'where ' . $datas;
 		elseif (is_array( $datas )) {
-			$sqls=array();
+			$sqls = array();
 			foreach ( $datas as $data ) {
 				switch (count( $data )) {
 					case 5 :
@@ -527,7 +527,7 @@ class Mysql {
 	}
 	
 	/**
-	 * bool|array public function fileds(str $table)
+	 * boolean|array public function fields(string $table)
 	 */
 	public function fields($table) {
 		if (empty( $table )) return false;
@@ -557,6 +557,13 @@ class Mysql {
 	 */
 	public function lastId() {
 		return $this->id;
+	}
+	
+	/**
+	 * array public function map(void)
+	 */
+	public function map() {
+		return $maps = array( 'string' => array( 'char', 'varchar', 'binary', 'varbinary', 'tinyblob', 'blob', 'mediumblob', 'longblob', 'tinytext', 'text', 'mediumtext', 'longtext', 'date', 'datetime', 'timestamp', 'time', 'year', 'bit' ), 'integer' => array( 'tinyint', 'smallint', 'int', 'mediumint', 'bigint' ), 'float' => array( 'decimal', 'float', 'double' ), 'boolean' => array( 'bool' ), 'null' => array() );
 	}
 	//
 }

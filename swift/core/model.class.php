@@ -3,10 +3,9 @@
 namespace Swift;
 
 class Model {
-	protected $database = null;
-	protected $trueTabName = null;
 	protected $name = null;
 	protected $datas = array();
+	protected $database = null;
 	
 	/**
 	 * void public function __construct(str|null $tabName, str|array|null $dsn)
@@ -294,27 +293,25 @@ class Model {
 		if (! is_array( $fields )) return $this->datas;
 		elseif (! empty( $fields )) {
 			if (! $this->isIntSeq( array_keys( $fields ), true )) return $this->datas;
-			elseif (! $this->isStrSeq( array_values( $fields ) )) return $this->datas;
-		} elseif (! empty( $_POST )) {
+			foreach ( $fields as &$value ) {
+				if (! $this->isCamelCaseRegular( $value )) return $this->datas;
+				$value = $this->camelCaseToDbRegular( $value );
+			}
+		}
+		if (! empty( $_POST )) {
 			$datas = $_POST;
 			foreach ( $datas as $key => &$value ) {
-				if (! empty( $fields && ! in_array( $key, $fields, true ) )) unset( $value );
-				elseif (! $this->isBetter( $key )) unset( $value );
-				elseif (! is_string( $value ) && ! is_array( $value )) unset( $value );
-				elseif (is_array( $value )) {
-					if (empty( $value )) unset( $value );
-					elseif (! $this->isIntSeq( array_keys( $value ), true )) unset( $value );
-					elseif (! $this->isStrSeq( array_values( $value ) )) unset( $value );
-					$value = implode( '{}', $value );
-				}
+				if (! empty( $fields ) && ! in_array( $key, $fields, true )) unset( $value );
+				elseif (! $this->isDbRegular( $key )) unset( $value );
+				elseif (is_array( $value )) $value = implode( '{}', $value );
 			}
-			if ($this->name && $this->database) {
+			if (! empty( $datas ) && $this->name && $this->database) {
 				$fields = $this->database->fields( $this->name );
 				if ($fields) {
 					$names = array_keys( $fields );
 					foreach ( $datas as $key => &$value ) {
 						if (! in_array( $key, $names, true )) unset( $value );
-						$value = $this->changeDataType( $value, $this->mapDataType( $fields [$key] ['type'] ) );
+						else $value = $this->changeDataType( $value, $this->mapDataType( $fields [$key] ['type'] ) );
 					}
 				}
 			}
@@ -336,15 +333,20 @@ class Model {
 			if (! empty( $datas ) && $this->name && $this->database) {
 				$fields = $this->database->fields( $this->name );
 				if ($fields) {
-					$keys = array_keys( $fields );
+					$names = array_keys( $fields );
 					foreach ( $datas as $key => &$value ) {
-						if (! in_array( $key, $keys, true )) unset( $value );
+						if (! in_array( $key, $names, true )) unset( $value );
 					}
 				}
 			}
 			$this->datas = $datas;
 		}
 		return $this->datas;
+	}
+	
+	/**
+	 */
+	public function validate() {
 	}
 	
 	/**
@@ -355,56 +357,31 @@ class Model {
 	}
 	
 	/**
-	 */
-	public function validate() {
-	}
-	
-	/**
-	 * boolean|array public function select()
+	 * boolean|array public function select(void)
 	 */
 	public function select() {
-		return $this->database->select();
+		return $this->database ? $this->database->select() : false;
 	}
 	
 	/**
-	 * boolean public function add(array $datas=array(str $prop=>scalar $value),...)
+	 * boolean|scalar public function add(void)
 	 */
-	public function add($datas) {
-		if (is_array( $datas )) {
-			$inputs = array();
-			foreach ( $datas as $key => $value ) {
-				if (! is_string( $key )) continue;
-				elseif (! $this->isLowerCamelCase( $key )) continue;
-				elseif (! is_scalar( $value ) && ! is_null( $value )) continue;
-				$inputs [$this->propToField( $key )] = $value;
-			}
-			return empty( $inputs ) ? false : $this->database->insert( $inputs );
-		}
-		return false;
+	public function add() {
+		return $this->database ? $this->database->insert( $this->datas ) : false;
 	}
 	
 	/**
-	 * boolean public function save(array $datas=array(str $prop=>scalar $value),...)
+	 * boolean|integer public function save(void)
 	 */
-	public function save($datas) {
-		if (is_array( $datas )) {
-			$inputs = array();
-			foreach ( $datas as $key => $value ) {
-				if (! is_string( $key )) continue;
-				elseif (! $this->isLowerCamelCase( $key )) continue;
-				elseif (! is_scalar( $value ) && ! is_null( $value )) continue;
-				$inputs [$this->propToField( $key )] = $value;
-			}
-			return empty( $inputs ) ? false : $this->database->update( $inputs );
-		}
-		return false;
+	public function save() {
+		return $this->database ? $this->database->update( $this->datas ) : false;
 	}
 	
 	/**
-	 * boolean public function delete(void)
+	 * boolean|integer public function delete(void)
 	 */
 	public function delete() {
-		return $this->database->delete();
+		return $this->database ? $this->database->delete() : false;
 	}
 	
 	/**
@@ -412,7 +389,7 @@ class Model {
 	 */
 	protected function isDbRegular($data) {
 		if (is_string( $data ) && $data != '') {
-			$pattern = '/([a-z]+_)*[a-z]+/';
+			$pattern = '/^([a-z]+_)*[a-z]+$/';
 			return preg_match( $pattern, $data ) ? true : false;
 		}
 		return false;
@@ -535,23 +512,11 @@ class Model {
 	}
 	
 	/**
-	 * boolean|string protected function getDataType(scalar $data)
-	 */
-	protected function getDataType($data) {
-		if (is_string( $data )) return 'string';
-		elseif (is_integer( $data )) return 'integer';
-		elseif (is_float( $data )) return 'float';
-		elseif (is_bool( $data )) return 'boolean';
-		elseif (is_null( $data )) return 'null';
-		return false;
-	}
-	
-	/**
 	 * boolean|string protected function mapDataType(string $type)
 	 */
 	protected function mapDataType($type) {
-		if (is_string( $type ) && $type != '') {
-			$maps = array( 'string' => array( 'char', 'varchar', 'binary', 'varbinary', 'tinyblob', 'blob', 'mediumblob', 'longblob', 'tinytext', 'text', 'mediumtext', 'longtext', 'date', 'datetime', 'timestamp', 'time', 'year', 'bit' ), 'integer' => array( 'tinyint', 'smallint', 'int', 'mediumint', 'bigint' ), 'float' => array( 'decimal', 'float', 'double' ), 'boolean' => array( 'bool' ), 'null' => array() );
+		if ($this->database && is_string( $type ) && $type != '') {
+			$maps = $this->database->map();
 			foreach ( $maps as $index => $map ) {
 				if (in_array( $type, $map, true )) return $index;
 			}
@@ -613,6 +578,6 @@ class Model {
 		}
 		return true;
 	}
-	// //
+	//
 }
 
