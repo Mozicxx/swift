@@ -1,42 +1,19 @@
 <?php
 
-function where($datas) {
-		if (is_string( $datas )) return 'where ' . $datas;
-		elseif (is_array( $datas )) {
-			foreach ( $datas as $data ) {
-				list ( $logic, $operator ) = array_keys( $data );
-				list ( $field, $require ) = array_values( $data );
-				is_integer( $logic ) ? $logic = 'and' : null;
-				is_integer( $operator ) ? $operator = 'eq' : null;
-				//$field = $this->backquote( $field );
-				
-				switch ($operator) {
-					case 'eq' :
-						if (is_integer( $require ) or is_float( $require )) $require = ( string ) $require;
-						elseif (is_string( $require )) $require = "'$require'";
-						elseif (is_bool( $require )) $require = empty( $require ) ? '0' : '1';
-						elseif (is_null( $require )) $require = 'null';
-						else return '';
-						$sqls[]=$field.'='.$require.' '.$logic;
-						break;
-					case 'neq' :
-						if (is_integer( $require ) || is_float( $require )) $require = ( string ) $require;
-						elseif (is_string( $require )) $require = "'$require'";
-						elseif (is_bool( $require )) $require = empty( $require ) ? '0' : '1';
-						elseif (is_null( $require )) $require = 'null';
-						else return '';
-						$sqls[]=$field.'!='.$require.' '.$logic;
-						break;
-					default:
-						return '';
-						break;
-				}
+function yes(){
+try {
+				$dsn='mysql:host=localhost;port=3306;dbname=html;charset=utf8';
+				$username='root';
+				$password='goodwin@00000';
+				$link = new \PDO( $dsn, $username, $password);
+				echo 'ok';
+			} catch ( \PDOException $e ) {
+				// E($e->getMessage())
+				print $e->getMessage()."<br />";
+				yes();
 			}
-			$sql = implode( ' ', $sqls );
-			return empty( $sql ) ? '' : 'where ' . substr( $sql, 0, strrpos( $sql, ' ' ) );
-		}
-		return '';
-	}
+}
+
+
+yes();
 	
-	$datas=array(array('userName','luna'),array('sex','neq'=>'male'));
-	print where('aaaa');

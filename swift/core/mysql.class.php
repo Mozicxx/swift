@@ -5,8 +5,8 @@ namespace Swift;
 use PDO;
 
 class Mysql {
-	const operate_read = 0;
-	const operate_write = 1;
+	const operate_read = 'read';
+	const operate_write = 'write';
 	protected $id = 0;
 	protected $sql = '';
 	protected $error = '';
@@ -15,32 +15,18 @@ class Mysql {
 	protected $link = null;
 	protected $ds = null;
 	protected $options = array( PDO::ATTR_CASE => PDO::CASE_LOWER, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_ORACLE_NULLS => PDO::NULL_NATURAL, PDO::ATTR_STRINGIFY_FETCHES => false );
-	protected $dsn = null;
+	protected $errConfigs = array();
+	protected $configs = array();
 	
 	/**
+	 * void public function __construct(array $configs)
 	 */
-	public function __construct($dsn) {
-		$pattern = '/^(\w+):\/\/(\w+):(.*)@([\w.]+):(\d*)\/(\w*)#(\w*)$/'; // mysql://root:123456@localhost:3306/swift#utf8
-		$reads = array();
-		$writes = array();
-		$filters = array( 'reads', 'writes' );
-		if (is_string( $dsn )) {
-			preg_match( $pattern, $dsn ) ? $this->dsn = $dsn : null;
-		} elseif (is_array( $dsn )) {
-			foreach ( $dsn as $key => $datas ) {
-				if (in_array( $key, $filters ) && is_array( $datas )) {
-					$datas = array_filter( $datas, 'is_string' );
-					foreach ( $datas as $data ) {
-						preg_match( $pattern, $data ) ? ${$key} [] = $data : null;
-					}
-				}
-			}
-			! empty( $reads ) ? $this->dsn ['read'] = $reads : null;
-			! empty( $writes ) ? $this->dsn ['write'] = $writes : null;
-		}
+	public function __construct($configs) {
+		$this->configs=$configs
 	}
 	
 	/**
+	 * void public function __destruct(void)
 	 */
 	public function __destruct() {
 		$this->free();
@@ -48,12 +34,46 @@ class Mysql {
 	}
 	
 	/**
+	 * array protected function dsn()
+	 */
+	protected function dsn($rw) {
+		foreach ( $this->configs as $key=>$config ) {
+			if (in_array( $config ['operate'], array( $rw, self::operate_both ) )) $configs [] = $config;
+		}
+		if (isset( $configs ) && $configs) $num = mt_rand( 0, count( $configs ) - 1 );
+		else return array();
+		extract( $configs [$num] );
+		$dsnConfigs = array( 'host=' . $host, 'port=' . ( string ) $port, 'dbname=' . $dbname, 'charset=' . $charset );
+		return array( $type . ':' . implode( ';', $dsnConfigs ), $username, $password );
+	}
+	
+	/**
+	 * boolean protected function link(string $rw);
+	 */
+	protected function link($rw) {
+		if (! $this->link) {
+			$configs = $this->dsn( $rw );
+			if ($configs) list ( $dsn, $username, $password ) = $configs;
+			else return false;
+			try {
+				$this->link = new \PDO( $dsn, $username, $password, $this->options );
+			} catch ( \PDOException $e ) {
+				// E($e->getMessage())
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * void public function close(void)
 	 */
 	public function close() {
 		$this->link = null;
 	}
 	
 	/**
+	 * void public function free(void)
 	 */
 	public function free() {
 		$this->ds = null;
@@ -89,75 +109,6 @@ class Mysql {
 		$this->error = $this->ds ? implode( ':', $this->ds->errorInfo() ) : '';
 		// E($this->error)
 		return $this->error;
-	}
-	
-	/**
-	 */
-	public function link($rw) {
-		if (! $this->link) {
-			if (empty( $this->dsn )) return false;
-			elseif (is_string( $this->dsn )) $dsn = $this->single();
-			elseif (is_array( $this->dsn )) $dsn = $this->ddb( $rw );
-			else return false;
-			
-			if (false === $dsn) return false;
-			$arr = $this->dsn( $dsn );
-			if (false === $arr) return false;
-			list ( $dsn, $username, $password ) = $arr;
-			
-			try {
-				$this->link = new \PDO( $dsn, $username, $password, $this->options );
-			} catch ( \PDOException $e ) {
-				// E($e->getMessage())
-				return false;
-			}
-		}
-		return $this->link;
-	}
-	
-	/**
-	 */
-	protected function single() {
-		if (empty( $this->dsn )) return false;
-		elseif (is_string( $this->dsn )) return $this->dsn;
-		return false;
-	}
-	
-	/**
-	 */
-	protected function ddb($rw) {
-		if (empty( $this->dsn )) return false;
-		elseif (is_array( $this->dsn )) {
-			$dsn = array();
-			if (self::operate_read === $rw) {
-				$dsn = isset( $this->dsn ['read'] ) ? $this->dsn ['read'] : array();
-			} elseif (self::operate_write === $rw) {
-				$dsn = isset( $this->dsn ['write'] ) ? $this->dsn ['write'] : array();
-			} else
-				return false;
-			if (empty( $dsn )) return false;
-			elseif (is_string( $dsn )) return $dsn;
-			elseif (is_array( $dsn )) {
-				$dsn = array_filter( $dsn, 'is_string' );
-				return empty( $dsn ) ? false : $dsn [mt_rand( 0, count( $dsn ) - 1 )];
-			}
-			return false;
-		}
-		return false;
-	}
-	
-	/**
-	 */
-	public function dsn($dsn) {
-		$pattern = '/^(\w+):\/\/(\w+):(.*)@([\w.]+):(\d*)\/(\w*)#(\w*)$/'; // mysql://root:123456@localhost:3306/thinkphp#utf8
-		$params = array();
-		if (! preg_match( $pattern, $dsn, $params )) return false;
-		list ( $dsn, $type, $username, $password, $host, $port, $dbname, $charset ) = $params;
-		$dsn1 [] = 'host=' . $host;
-		'' != $port ? $dsn1 [] = 'port=' . $port : null;
-		'' != $dbname ? $dsn1 [] = 'dbname=' . $dbname : null;
-		'' != $charset ? $dsn1 [] = 'charset=' . $charset : null;
-		return array( $type . ':' . implode( ';', $dsn1 ), $username, $password );
 	}
 	
 	/**
