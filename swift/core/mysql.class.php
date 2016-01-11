@@ -7,6 +7,7 @@ use PDO;
 class Mysql {
 	const operate_read = 'read';
 	const operate_write = 'write';
+	const operate_both = 'both';
 	protected $id = 0;
 	protected $sql = '';
 	protected $error = '';
@@ -21,11 +22,11 @@ class Mysql {
 	 * void public function __construct(array $configs)
 	 */
 	public function __construct($configs) {
-		$this->configs=$configs
+		$this->configs = $configs;
 	}
 	
 	/**
-	 * void public function __get(string $prop)
+	 * string public function __get(string $prop)
 	 */
 	public function __get($prop) {
 		return isset( $this->frags [$prop] ) ? $this->frags [$prop] : '';
@@ -48,10 +49,10 @@ class Mysql {
 			if (in_array( $config ['operate'], array( $rw, self::operate_both ) ) && ! in_array( $key, $this->errConfigs )) $configs [$index] = $config;
 		}
 		if ($configs) {
-			$id = array_rand( $configs );
-			extract( $configs [$id] );
+			$key = array_rand( $configs );
+			extract( $configs [$key] );
 			$dsn = array( 'host=' . $host, 'port=' . ( string ) $port, 'dbname=' . $dbname, 'charset=' . $charset );
-			return array( $id, $type . ':' . implode( ';', $dsn ), $username, $password );
+			return array( $key, $type . ':' . implode( ';', $dsn ), $username, $password );
 		}
 		return array();
 	}
@@ -60,28 +61,26 @@ class Mysql {
 	 * boolean protected function link(string $rw);
 	 */
 	protected function link($rw) {
-		if (! $this->link [$rw]) {
-			$config = $this->dsn( $rw );
-			if ($config) list ( $id, $dsn, $username, $password ) = $config;
-			else return false;
-			try {
-				$link = new \PDO( $dsn, $username, $password, $this->options );
-				$this->errConfigs = array();
-				return true;
-			} catch ( \PDOException $e ) {
-				// E($e->getMessage())
-				$this->errConfigs [] = $id;
-				return $this->link( $rw );
-			}
-		} else
+		if ($this->link [$rw]) return true;
+		$config = $this->dsn( $rw );
+		if ($config) list ( $key, $dsn, $username, $password ) = $config;
+		else return false;
+		try {
+			$this->link [$rw] = new \PDO( $dsn, $username, $password, $this->options );
+			$this->errConfigs = array();
 			return true;
+		} catch ( \PDOException $e ) {
+			// E($e->getMessage())
+			$this->errConfigs [] = $key;
+			return $this->link( $rw );
+		}
 	}
 	
 	/**
 	 * void public function close(void)
 	 */
 	public function close() {
-		$this->link = null;
+		$this->links = array( 'read' => null, 'write' => null );
 	}
 	
 	/**
@@ -92,34 +91,37 @@ class Mysql {
 	}
 	
 	/**
+	 * boolean public function work(void);
 	 */
 	public function work() {
-		if (! $this->link()) return false;
-		elseif ($this->link->inTransaction()) return false;
-		return $this->link->beginTransaction();
+		if (! $this->link( self::operate_write )) return false;
+		elseif ($this->links [self::operate_write]->inTransaction()) return false;
+		return $this->links [self::operate_write]->beginTransaction();
 	}
 	
 	/**
+	 * boolean public function commit(void)
 	 */
 	public function commit() {
-		if (! $this->link()) return false;
-		elseif ($this->link->inTransaction()) return $this->link->commit();
-		return false;
+		if (! $this->links [self::operate_write]) return false;
+		elseif (! $this->links [self::operate_write]->inTransaction()) return false;
+		return $this->links [self::operate_write]->commit();
 	}
 	
 	/**
+	 * boolean public function rollback();
 	 */
 	public function rollback() {
-		if (! $this->link()) return false;
-		elseif ($this->link->inTransaction()) return $this->link->rollback();
-		return false;
+		if (! $this->links [self::operate_write]) return false;
+		elseif (! $this->links [self::operate_write]->inTransaction()) return false;
+		return $this->links [self::operate_write]->rollback();
 	}
 	
 	/**
+	 * string public function error(void)
 	 */
 	public function error() {
 		$this->error = $this->ds ? implode( ':', $this->ds->errorInfo() ) : '';
-		// E($this->error)
 		return $this->error;
 	}
 	
@@ -127,11 +129,11 @@ class Mysql {
 	 * void protected function sql(void);
 	 */
 	protected function sql() {
-		$frags = array( 'distinct', 'field', 'table', 'join', 'where', 'group', 'having', 'order', 'limit' );
+		$keys = array( 'distinct', 'field', 'table', 'join', 'where', 'group', 'having', 'order', 'limit' );
 		$this->frags = array();
-		foreach ( $frags as $frag ) {
-			if (isset( $this->datas [$frag] )) {
-				$this->$frags [$frag] = $this->$frag( $this->datas [$frag] );
+		foreach ( $keys as $key ) {
+			if (isset( $this->datas [$key] )) {
+				$this->frags [$key] = $this->$key( $this->datas [$key] );
 			}
 		}
 	}
@@ -190,7 +192,7 @@ class Mysql {
 				$operators = array( 'eq' => '=', 'neq' => '!=' );
 				$operator = $operators [$operator];
 				list ( $r, $field ) = explode( '.', $rfield );
-				if (! is_string( $alias )) $rfield = $alias . '.' . $filed;
+				if (! is_string( $alias )) $rfield = $alias . '.' . $field;
 				$sqls [] = $type . ' ' . $r . ' ' . $alias . ' on ' . $lfield . $operator . $rfield;
 			}
 			return implode( ' ', $sqls );
