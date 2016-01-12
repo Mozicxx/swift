@@ -119,10 +119,7 @@ class Model {
 					list ( $alias, $operator, $nobody ) = array_keys( $datas );
 					list ( $rfield, $lfield, $type ) = array_values( $datas );
 					if (! is_integer( $nobody )) return false;
-					elseif (! in_array( $type, array( 
-						'inner', 
-						'left', 
-						'right' ), true )) return false;
+					elseif (! in_array( $type, array( 'inner', 'left', 'right' ), true )) return false;
 					break;
 				case 2 :
 					list ( $alias, $operator ) = array_keys( $datas );
@@ -134,9 +131,7 @@ class Model {
 			}
 			if (! is_integer( $alias ) && ! $this->isDbRegular( $alias )) return false;
 			elseif (! $this->isDbRegularPlus( $rfield )) return false;
-			elseif (! in_array( $operator, array( 
-				'eq', 
-				'neq' ), true )) return false;
+			elseif (! in_array( $operator, array( 'eq', 'neq' ), true )) return false;
 			elseif (! $this->isDbRegularPlus( $lfield )) return false;
 			return true;
 		}
@@ -172,12 +167,8 @@ class Model {
 			elseif (! $this->isIntSeq( array_keys( $datas ) )) return false;
 			list ( $logic, $operator ) = array_keys( $datas );
 			list ( $field, $require ) = array_values( $datas );
-			if (! is_integer( $logic ) && ! in_array( $logic, array( 
-				'and', 
-				'or' ), true )) return false;
-			elseif (! is_integer( $operator ) && ! in_array( $operator, array( 
-				'eq', 
-				'neq' ), true )) return false;
+			if (! is_integer( $logic ) && ! in_array( $logic, array( 'and', 'or' ), true )) return false;
+			elseif (! is_integer( $operator ) && ! in_array( $operator, array( 'eq', 'neq' ), true )) return false;
 			elseif (! $this->isDbRegular( $field ) && ! $this->isDbRegularPlus( $field )) return false;
 			elseif (! is_scalar( $require ) && ! is_null( $require )) return false;
 			return true;
@@ -200,9 +191,7 @@ class Model {
 						if (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
 					} else {
 						if (! $this->isDbRegular( $key ) && ! $this->isDbRegularPlus( $key )) return $this;
-						elseif (! in_array( $value, array( 
-							'asc', 
-							'desc' ), true )) return $this;
+						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
 					}
 				}
 				$sqls ['group'] = $datas;
@@ -240,12 +229,8 @@ class Model {
 			elseif (! $this->isIntSeq( array_keys( $datas ) )) return false;
 			list ( $logic, $operator ) = array_keys( $datas );
 			list ( $field, $require ) = array_values( $datas );
-			if (! is_integer( $logic ) && ! in_array( $logic, array( 
-				'and', 
-				'or' ), true )) return false;
-			elseif (! is_integer( $operator ) && ! in_array( $operator, array( 
-				'eq', 
-				'neq' ), true )) return false;
+			if (! is_integer( $logic ) && ! in_array( $logic, array( 'and', 'or' ), true )) return false;
+			elseif (! is_integer( $operator ) && ! in_array( $operator, array( 'eq', 'neq' ), true )) return false;
 			elseif (! $this->isDbRegular( $field ) && ! $this->isDbRegularPlus( $field )) return false;
 			elseif (! is_scalar( $require ) && ! is_null( $require )) return false;
 			return true;
@@ -268,9 +253,7 @@ class Model {
 						if (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
 					} else {
 						if (! $this->isDbRegular( $key ) && ! $this->isDbRegularPlus( $key )) return $this;
-						elseif (! in_array( $value, array( 
-							'asc', 
-							'desc' ), true )) return $this;
+						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
 					}
 				}
 				$sqls ['order'] = $datas;
@@ -451,9 +434,7 @@ class Model {
 	protected function isDistributedDsn($datas) {
 		if (! is_array( $datas ) or empty( $datas )) return false;
 		foreach ( $datas as $index => $data ) {
-			if (! in_array( $index, array( 
-				'reads', 
-				'writes' ), true )) return false;
+			if (! in_array( $index, array( 'reads', 'writes' ), true )) return false;
 			elseif (! is_array( $data ) or empty( $data )) return false;
 			elseif (! $this->isIntSeq( array_keys( $data ), true )) return false;
 			foreach ( $data as $value ) {
@@ -469,14 +450,7 @@ class Model {
 	protected function isDsn($datas) {
 		if (is_array( $datas ) && ! empty( $datas )) {
 			foreach ( $datas as $key => $value ) {
-				if (! in_array( $key, array( 
-					'type', 
-					'host', 
-					'port', 
-					'user', 
-					'pwd', 
-					'database', 
-					'charset' ), true )) return false;
+				if (! in_array( $key, array( 'type', 'host', 'port', 'user', 'pwd', 'database', 'charset' ), true )) return false;
 				elseif ('port' == $value && ! is_integer( $value )) return false;
 				elseif (! is_string( $value ) or '' == $value) return false;
 			}
