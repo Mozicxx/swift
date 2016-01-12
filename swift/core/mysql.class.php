@@ -25,8 +25,9 @@ class Mysql {
 	public function __construct($configs) {
 		if (empty( $configs )) return;
 		elseif (! $this->isIntSeq( array_keys( $configs ), true )) return;
-		foreach ( $configs as $config )
+		foreach ( $configs as $config ) {
 			if (! $this->isDsn( $config )) return;
+		}
 		$this->configs = $configs;
 	}
 	
