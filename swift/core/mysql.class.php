@@ -157,7 +157,6 @@ class Mysql {
 	public function cmd(string $sql) {
 		$this->sql = $sql;
 		if ($this->link( self::operate_write )) {
-			if ($this->ds) $this->free();
 			$this->ds = $this->link->prepare( $this->sql );
 			if ($this->ds && $this->ds->execute()) return $this->ds->rowCount;
 		}
@@ -170,7 +169,6 @@ class Mysql {
 	public function query(string $sql) {
 		$this->sql = $sql;
 		if ($this->link( self::operate_read )) {
-			if ($this->ds) $this->free();
 			$this->ds = $this->link->prepare( $this->sql );
 			if ($this->ds && $this->ds->execute()) return $this->ds->fetchAll( PDO::FETCH_ASSOC );
 		}
@@ -190,10 +188,10 @@ class Mysql {
 	 * integer public function insert(array $datas=array(string $field=>scalar|array $value,...))
 	 */
 	public function insert(array $datas) {
-		$regulars = $this->shell( $datas );
-		$keyStr = implode( ',', array_keys( $regulars ) );
-		$valueStr = implode( ',', array_values( $regulars ) );
-		$sqls = array( 'insert', 'into', $this->table, '(' . $keyStr . ')', 'values(' . $valueStr . ')' );
+		$$datas = $this->shell( $datas );
+		$keyStr = implode( ',', array_keys( $datas ) );
+		$valueStr = implode( ',', array_values( $datas ) );
+		$sqls = array( 'insert', 'into', $this->table . '(' . $keyStr . ')', 'values(' . $valueStr . ')' );
 		$sqls = array_filter( $sqls, 'strlen' );
 		return $this->cmd( implode( ' ', $sqls ) );
 	}

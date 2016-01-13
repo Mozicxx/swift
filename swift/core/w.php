@@ -2,12 +2,12 @@
 
 	declare(strict_types=1);
 
-	/**
-	 * void public function data(string $key [,string $value])
-	 */
-	 function data(string $key, string $value=null): bool{
-		 $keysRegular=array('distinct', 'field', 'table', 'join', 'where', 'group', 'having', 'order', 'limit' );
-		 if(!in_array($key, $keysRegular)) return false;
-	 }
-	 
-	var_dump( data('field',null));
+	$dsn="mysql:host=localhost;port=3306;dbname=html;charset=utf8";
+	$username='root';
+	$password='goodwin@000';
+$database=new PDO($dsn, $username, $password);
+$sql="delete from aa";
+$ds=$database->prepare($sql);
+$result=$ds->execute();
+var_dump($result);
+var_dump($ds->fetchAll( PDO::FETCH_ASSOC ));
