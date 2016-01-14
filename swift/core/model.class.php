@@ -56,22 +56,10 @@ class Model {
 	}
 	
 	/**
-	 * Model public function table(null $datas)
-	 * Model public function table(array $datas=array([string $alias=>]string $table,...))
-	 * Model public function table(string $datas)
+	 * Model public function table(string $datas=null)
 	 */
-	public function table($datas) {
-		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['table'] );
-			elseif (is_array( $datas ) && ! empty( $datas )) {
-				foreach ( $datas as $key => $value ) {
-					if (! is_integer( $key ) && ! $this->isDbRegular( $key )) return $this;
-					elseif (! $this->isDbRegular( $value )) return $this;
-				}
-				$sqls ['table'] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') $sqls ['table'] = $datas;
-		}
+	public function table(string $datas=null) {
+		if ($this->database) $this->database->data( 'table', $datas );
 		return $this;
 	}
 	
