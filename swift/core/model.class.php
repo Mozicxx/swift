@@ -48,23 +48,10 @@ class Model {
 	}
 	
 	/**
-	 * Model public function field(null $datas)
-	 * Model public function field(array $datas=array([string $alias=>]string $field,...))
-	 * Model public function field(string $datas)
+	 * Model public function field(string $datas=null)
 	 */
-	public function field($datas) {
-		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['field'] );
-			elseif (is_array( $datas ) && ! empty( $datas )) {
-				if (! $this->isIntSeq( array_keys( $datas ) )) return $this;
-				foreach ( $datas as $key => $value ) {
-					if (! is_integer( $key ) && ! $this->isDbRegular( $key )) return $this;
-					elseif (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
-				}
-				$sqls ['field'] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') $sqls ['field'] = $datas;
-		}
+	public function field(string $datas = null) {
+		if ($this->database) $this->database->data( 'field', $datas );
 		return $this;
 	}
 	

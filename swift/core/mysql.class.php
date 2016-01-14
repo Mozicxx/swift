@@ -18,12 +18,13 @@ class Mysql {
 	protected $ds = null;
 	protected $options = array( PDO::ATTR_CASE => PDO::CASE_LOWER, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_ORACLE_NULLS => PDO::NULL_NATURAL, PDO::ATTR_STRINGIFY_FETCHES => false );
 	protected $configs = array();
+	protected $errorConfigs = array();
 	
 	/**
 	 * void public function __construct(array $configs)
 	 */
-	public function __construct($configs) {
-		if (empty( $configs )) return;
+	public function __construct(array $configs) {
+		if (! $configs) return;
 		elseif (! $this->isIntSeq( array_keys( $configs ), true )) return;
 		foreach ( $configs as $config ) {
 			if (! $this->isDsn( $config )) return;
@@ -97,18 +98,18 @@ class Mysql {
 	}
 	
 	/**
-	 * boolean public function work(void);
+	 * boolean public function begin(void);
 	 */
-	public function work() {
+	public function begin() {
 		if (! $this->link( self::operate_write )) return false;
 		elseif ($this->links [self::operate_write]->inTransaction()) return false;
 		return $this->links [self::operate_write]->beginTransaction();
 	}
 	
 	/**
-	 * boolean public function commit(void)
+	 * boolean public function end(void)
 	 */
-	public function commit() {
+	public function end() {
 		if (! $this->links [self::operate_write]) return false;
 		elseif (! $this->links [self::operate_write]->inTransaction()) return false;
 		return $this->links [self::operate_write]->commit();
@@ -156,11 +157,13 @@ class Mysql {
 	 */
 	public function cmd(string $sql) {
 		$this->sql = $sql;
-		if ($this->link( self::operate_write )) {
-			$this->ds = $this->link->prepare( $this->sql );
-			if ($this->ds && $this->ds->execute()) return $this->ds->rowCount;
-		}
-		return - 1;
+		if (! $this->link( self::operate_write )) return - 1;
+		$this->ds = $this->link->prepare( $this->sql );
+		if ($this->ds && $this->ds->execute()) {
+			$this->id = ( int ) $this->link->lastInsertId();
+			return $this->ds->rowCount();
+		} else
+			return - 1;
 	}
 	
 	/**
@@ -168,11 +171,9 @@ class Mysql {
 	 */
 	public function query(string $sql) {
 		$this->sql = $sql;
-		if ($this->link( self::operate_read )) {
-			$this->ds = $this->link->prepare( $this->sql );
-			if ($this->ds && $this->ds->execute()) return $this->ds->fetchAll( PDO::FETCH_ASSOC );
-		}
-		return array();
+		if (! $this->link( self::operate_read )) return array();
+		$this->ds = $this->link->prepare( $this->sql );
+		return $this->ds && $this->ds->execute() ? $this->ds->fetchAll( PDO::FETCH_ASSOC ) : array();
 	}
 	
 	/**
@@ -185,10 +186,11 @@ class Mysql {
 	}
 	
 	/**
-	 * integer public function insert(array $datas=array(string $field=>scalar|array $value,...))
+	 * integer public function insert(array $datas=array(string $field=>scalar $value,...))
 	 */
 	public function insert(array $datas) {
-		$$datas = $this->shell( $datas );
+		$datas = $this->shell( $datas );
+		if (! $datas) return 0;
 		$keyStr = implode( ',', array_keys( $datas ) );
 		$valueStr = implode( ',', array_values( $datas ) );
 		$sqls = array( 'insert', 'into', $this->table . '(' . $keyStr . ')', 'values(' . $valueStr . ')' );
@@ -197,12 +199,14 @@ class Mysql {
 	}
 	
 	/**
-	 * integer public function update(array $datas=array(string $field=>scalar|array $value,...))
+	 * integer public function update(array $datas=array(string $field=>scalar $value,...))
 	 */
 	public function update(array $datas) {
-		$regulars = $this->shell( $datas );
-		foreach ( $regulars as $key => &$value )
+		$datas = $this->shell( $datas );
+		if (! $datas) return 0;
+		foreach ( $regulars as $key => &$value ) {
 			$value = $key . '=' . $value;
+		}
 		$dataStr = implode( ',', $regulars );
 		$sqls = array( 'update', $this->table, 'set', $dataStr, $this->where, $this->order, $this->limit );
 		$sqls = array_filter( $sqls, 'strlen' );
@@ -219,16 +223,21 @@ class Mysql {
 	}
 	
 	/**
-	 * array protected function shell(array $datas=array(string $field=>scalar|array $value,...))
+	 * array protected function shell(array $datas=array(string $field=>scalar $value,...))
 	 */
 	protected function shell(array $datas) {
+		if (! $datas) return array();
+		elseif (! $this->isIntSeq( array_keys( $datas ), true )) return array();
+		$regulars = array();
 		foreach ( $datas as $key => $value ) {
 			$key = backquote( $key );
 			if (is_integer( $value ) or is_float( $value )) $value = ( string ) $value;
-			elseif (is_string( $value )) $value = "'" . htmlspecialchars( $value ) . "'";
-			elseif (is_bool( $value )) $value = $value ? '1' : '0';
+			elseif (is_string( $value )) {
+				$pattern = '/\{(.*)\}/';
+				$value = preg_match( $pattern, $value, $matchs ) ? $value = $matchs [1] : "'" . htmlspecialchars( $value ) . "'";
+			} elseif (is_bool( $value )) $value = $value ? '1' : '0';
 			elseif (is_null( $value )) $value = 'null';
-			elseif (is_array( $value )) $value = $value [0];
+			else return array();
 			$regulars [$key] = $value;
 		}
 		return $regulars;
@@ -239,23 +248,23 @@ class Mysql {
 	 */
 	public function fields(string $table) {
 		if (! $this->isDbRegular( $stable )) return array();
-		$sql = 'show columns from ' . $this->backquote( $table );
-		$fields = $this->query( $sql );
-		if (is_bool( $fields )) return array();
-		foreach ( $fields as $field ) {
-			$keys = array_map( 'strtolower', array_keys( $field ) );
-			$values = array_map( 'strotolower', array_values( $field ) );
-			$field = array_combine( $keys, $values );
-			if ('tiny(1)' == $field ['type']) $field ['type'] = 'boolean';
+		$sql = 'describe ' . $this->backquote( $table );
+		$datas = $this->query( $sql );
+		if ($datas) return array();
+		$fields = array();
+		foreach ( $datas as $data ) {
+			$keys = array_map( 'strtolower', array_keys( $data ) );
+			$values = array_map( 'strotolower', array_values( $data ) );
+			$data = array_combine( $keys, $values );
+			if ('tiny(1)' == $data ['type']) $data ['type'] = 'boolean';
 			else {
 				$pattern = '/^([a-z]+).*$/';
-				preg_match( $pattern, $field ['type'], $matchs );
-				$field ['type'] = $matchs [1];
+				preg_match( $pattern, $data ['type'], $matchs );
+				$data ['type'] = $matchs [1];
 			}
-			$key = current( $field );
-			$datas [$key] = $field;
+			$fields [$data ['field']] = $data;
 		}
-		return $datas;
+		return $fields;
 	}
 	
 	/**
@@ -270,8 +279,9 @@ class Mysql {
 	 */
 	protected function backquote(string $data) {
 		$datas = explode( '.', $data );
-		foreach ( $datas as &$value )
+		foreach ( $datas as &$value ) {
 			$value = '`' . $value . '`';
+		}
 		return implode( '.', $datas );
 	}
 	
@@ -293,11 +303,28 @@ class Mysql {
 	 * boolean protected function isDbRegular(string $data)
 	 */
 	protected function isDbRegular(string $data) {
-		if (strlen( $data )) {
-			$pattern = '/^([a-z]+_)*[a-z]+$/';
-			return preg_match( $pattern, $data ) ? true : false;
+		$pattern = '/^([a-z]+_)*[a-z]+$/';
+		return preg_match( $pattern, $data ) ? true : false;
+	}
+	
+	/**
+	 * boolean protected function isDbRegularPlus(string $data)
+	 */
+	protected function isDbRegularPlus(string $data) {
+		$datas = explode( '.', $data );
+		if (count( $datas ) != 2) return false;
+		foreach ( $datas as $value ) {
+			if (! $this->isDbRegular( $value )) return false;
 		}
-		return false;
+		return true;
+	}
+	
+	/**
+	 * boolean protected function isCamelCaseRegular(string $data)
+	 */
+	protected function isCamelCaseRegular(string $data) {
+		$pattern = '/^[a-z]+([A-Z][a-z]*)*$/';
+		return preg_match( $pattern, $data ) ? true : false;
 	}
 	
 	/**
@@ -308,32 +335,28 @@ class Mysql {
 		foreach ( $datas as $key => $value ) {
 			if (! in_array( $key, array( 'operate', 'type', 'host', 'port', 'user', 'pwd', 'database', 'charset' ), true )) return false;
 			elseif ('port' == $value && ! is_integer( $value )) return false;
-			elseif (! is_string( $value ) or ! strlen( $datas )) return false;
+			elseif (! is_string( $value ) or '' == $value) return false;
 		}
 		return true;
 	}
 	
 	/**
-	 * boolean protected function isIntSeq(array $datas [,boolean $mode])
+	 * boolean protected function isIntSeq(array $datas [,boolean $mode=false])
 	 */
-	protected function isIntSeq($datas, $mode = false) {
-		if (! is_array( $datas ) or empty( $data )) return false;
-		elseif (! is_bool( $mode )) return false;
+	protected function isIntSeq(array $datas, bool $mode = false) {
 		$values = $mode ? array_filter( array_values( $datas ), 'is_integer' ) : array_values( $datas );
 		foreach ( $values as $key => $value ) {
-			if ($key != $value) return false;
+			if ($key !== $value) return false;
 		}
 		return true;
 	}
 	
 	/**
-	 * boolean protected function isStrSeq(array $datas [,boolean $mode])
+	 * boolean protected function isStrSeq(array $datas [,boolean $mode=false])
 	 */
-	protected function isStrSeq($datas, $mode = false) {
-		if (! is_array( $datas ) or empty( $data )) return false;
-		elseif (! is_bool( $mode )) return false;
-		$values = array_values( $datas );
-		foreach ( $values as $value ) {
+	protected function isStrSeq(string $datas, bool $mode = false) {
+		$datas = array_values( $datas );
+		foreach ( $datas as $value ) {
 			if (! is_string( $value )) return false;
 			elseif ($mode && '' == $value) return false;
 		}
