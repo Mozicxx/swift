@@ -16,7 +16,7 @@ class Enginex {
 	public function __construct(string $url){
 		list($this->module, $this->controller, $this->action)=explode('.',$url);
 		$this->hash=md5($url);
-		
+		if()
 	}
 	
 	/**
