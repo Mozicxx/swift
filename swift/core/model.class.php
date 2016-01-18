@@ -3,46 +3,43 @@
 namespace Swift;
 
 class Model {
-	protected $name = null;
+	protected $name = '';
 	protected $datas = array();
 	protected $database = null;
 	
 	/**
-	 * void public function __construct(str|null $tabName, str|array|null $dsn)
+	 * void public function __construct(string $name=null, string $server=null)
 	 */
-	public function __construct($tabName = null, $dsn = null) {
-		if ($this->isLowerCamelCase( $tabName )) $this->tabName = $tabName;
+	public function __construct(string $name = null, $dsn = null) {
+		if ($this->isCamelCaseRegular( $name )) $this->name = $name;
 		$this->database( $dsn );
 	}
 	
 	/**
-	 * boolean public function database([null $dsn])
-	 * boolean public function database(array $dsn=array(string $key=>string|integer $value,...)|array('reads'=>array(...), 'writes'=>array(...)))
-	 * boolean public function database(string $dsn)
+	 * boolean public function database(string $configKey=null)
 	 */
-	public function database($dsn = null) {
-		if (is_null( $dsn )) $dsn = C( 'database_dsn' );
-		elseif (is_string( $dsn ) && $dsn != '') $dsn = C( $dsn );
-		
-		if (! is_array( $dsn ) or empty( $dsn )) return false;
-		elseif (! $this->isSingleDsn( $dsn ) && ! $this->isDdbDsn( $dsn )) return false;
-		elseif ($this->database) {
+	public function database(string $key=null) {
+		$dsns = is_null( $key ) ? C( 'databases_dsn' ) : C( $key );
+		if (! is_array( $datas ) or empty( $datas )) return false;
+		elseif (! $this->isIntSeq( array_keys( $datas ), true )) return false;
+		foreach ( $datas as $data ) {
+			if (! $this->isDsn( $data )) return false;
+		}
+		if ($this->database) {
 			$this->database->close();
 			$this->database = null;
 		}
-		$this->database = new \Swift\Mysql( $dsn );
+		$this->database = new \Swift\Mysql( $datas );
 		return $this->database ? true : false;
 	}
 	
 	/**
-	 * Model public function distinct(null $datas)
-	 * Model public function distinct(boolean $datas)
+	 * Model public function distinct(boolean $data=null)
 	 */
-	public function distinct($datas) {
+	public function distinct(bool $data = null) {
 		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['distinct'] );
-			elseif (is_bool( $datas )) $sqls ['distinct'] = $datas;
+			if (is_bool( $data )) $data = $data ? 'distinct' : 'all';
+			$this->database->data( 'distinct', $data );
 		}
 		return $this;
 	}
@@ -58,204 +55,57 @@ class Model {
 	/**
 	 * Model public function table(string $datas=null)
 	 */
-	public function table(string $datas=null) {
+	public function table(string $datas = null) {
 		if ($this->database) $this->database->data( 'table', $datas );
 		return $this;
 	}
 	
 	/**
-	 * Model public function join(null $datas)
-	 * Model public function join(array $datas=array(array(...),...)
-	 * Model public function join(string $datas)
+	 * Model public function join(string $data=null)
 	 */
-	public function join($datas) {
-		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['join'] );
-			elseif (is_array( $datas ) && ! empty( $datas )) {
-				if (! $this->isIntSeq( array_keys( $datas ), true )) return $this;
-				foreach ( $datas as $value ) {
-					if (! $this->isJoinChild( $value )) return $this;
-				}
-				$sqls ['join'] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') $sqls ['join'] = $datas;
-		}
+	public function join(string $data) {
+		if ($this->database) $this->database->data( 'join', $data );
 		return $this;
 	}
 	
 	/**
-	 * boolean protected function isJoinChild(array $datas=array([string $alias=>]string $r.field ,[string $operator=>]string $l.field [,string $type]))
+	 * Model public function where(string $data=null)
 	 */
-	protected function isJoinChild($datas) {
-		if (is_array( $datas ) && ! empty( $datas )) {
-			if (! $this->isIntSeq( array_keys( $datas ) )) return false;
-			switch (count( $datas )) {
-				case 3 :
-					list ( $alias, $operator, $nobody ) = array_keys( $datas );
-					list ( $rfield, $lfield, $type ) = array_values( $datas );
-					if (! is_integer( $nobody )) return false;
-					elseif (! in_array( $type, array( 'inner', 'left', 'right' ), true )) return false;
-					break;
-				case 2 :
-					list ( $alias, $operator ) = array_keys( $datas );
-					list ( $rfield, $lfield ) = array_values( $datas );
-					break;
-				default :
-					return $this;
-					break;
-			}
-			if (! is_integer( $alias ) && ! $this->isDbRegular( $alias )) return false;
-			elseif (! $this->isDbRegularPlus( $rfield )) return false;
-			elseif (! in_array( $operator, array( 'eq', 'neq' ), true )) return false;
-			elseif (! $this->isDbRegularPlus( $lfield )) return false;
-			return true;
-		}
-		return false;
-	}
-	
-	/**
-	 * Model public function where(null $datas)
-	 * Model public function where(array $datas=array(array(...),...))
-	 * Model public function where(string $datas)
-	 */
-	public function where($datas) {
-		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['where'] );
-			elseif (is_array( $datas ) && ! empty( $datas )) {
-				if (! $this->isIntSeq( $datas, true )) return $this;
-				foreach ( $datas as $value ) {
-					if (! $this->isWhereChild( $value )) return $this;
-				}
-				$sqls ['where'] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') $sqls ['where'] = $datas;
-		}
+	public function where(string $data = null) {
+		if ($this->database) $this->database->data('where',$data)
 		return $this;
 	}
 	
 	/**
-	 * boolean protected function isWhereChild(array $datas=array([string $logic=>]string $field, [string $operator=>] scalar $require))
+	 * Model public function group(string $datas=null)
 	 */
-	protected function isWhereChild($datas) {
-		if (is_array( $datas ) && ! empty( $datas )) {
-			if (count( $datas ) != 2) return false;
-			elseif (! $this->isIntSeq( array_keys( $datas ) )) return false;
-			list ( $logic, $operator ) = array_keys( $datas );
-			list ( $field, $require ) = array_values( $datas );
-			if (! is_integer( $logic ) && ! in_array( $logic, array( 'and', 'or' ), true )) return false;
-			elseif (! is_integer( $operator ) && ! in_array( $operator, array( 'eq', 'neq' ), true )) return false;
-			elseif (! $this->isDbRegular( $field ) && ! $this->isDbRegularPlus( $field )) return false;
-			elseif (! is_scalar( $require ) && ! is_null( $require )) return false;
-			return true;
-		}
-		return false;
-	}
-	
-	/**
-	 * Model public function group(null $datas)
-	 * Model public function group(array $datas=array(string $field[=>string $type],...)
-	 * Model public function group(string $datas)
-	 */
-	public function group($datas) {
-		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['group'] );
-			elseif (is_array( $datas ) && ! empty( $datas )) {
-				foreach ( $datas as $key => $value ) {
-					if (is_integer( $key )) {
-						if (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
-					} else {
-						if (! $this->isDbRegular( $key ) && ! $this->isDbRegularPlus( $key )) return $this;
-						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
-					}
-				}
-				$sqls ['group'] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') $sqls ['group'] = $datas;
-		}
+	public function group(string $data) {
+		if ($this->database) $this->database->data( 'group', $data );
 		return $this;
 	}
 	
 	/**
-	 * Model public function having(null $datas)
-	 * Model public function having(array $datas=array(array(...),...))
-	 * Model public function having(string $datas)
+	 * Model public function having(string $data=null)
 	 */
-	public function having($datas) {
-		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['having'] );
-			elseif (is_array( $datas ) && ! empty( $datas )) {
-				if (! $this->isIntSeq( $datas, true )) return $this;
-				foreach ( $datas as $data ) {
-					if (! $this->isHavingChild( $data )) return $this;
-				}
-				$sqls ['having'] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') $sqls ['having'] = $datas;
-		}
+	public function having(string $data) {
+		if ($this->database) $this->database->data( 'having', $data );
 		return $this;
 	}
 	
 	/**
-	 * boolean protected function isHavingChild(array $datas=array([string $logic=>]string $field, [string $operator=>] scalar $require))
-	 */
-	protected function isHavingChild($datas) {
-		if (is_array( $datas ) && ! empty( $datas )) {
-			if (count( $datas ) != 2) return false;
-			elseif (! $this->isIntSeq( array_keys( $datas ) )) return false;
-			list ( $logic, $operator ) = array_keys( $datas );
-			list ( $field, $require ) = array_values( $datas );
-			if (! is_integer( $logic ) && ! in_array( $logic, array( 'and', 'or' ), true )) return false;
-			elseif (! is_integer( $operator ) && ! in_array( $operator, array( 'eq', 'neq' ), true )) return false;
-			elseif (! $this->isDbRegular( $field ) && ! $this->isDbRegularPlus( $field )) return false;
-			elseif (! is_scalar( $require ) && ! is_null( $require )) return false;
-			return true;
-		}
-		return false;
-	}
-	
-	/**
-	 * Model public function order(null $datas)
-	 * Model public function order(array $datas=array(string $field[=>string $type],...))
-	 * Model public function order(string $datas)
+	 * Model public function order(string $datas=null)
 	 */
 	public function order($datas) {
 		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['order'] );
-			elseif (is_array( $datas ) && ! empty( $datas )) {
-				foreach ( $datas as $key => $value ) {
-					if (is_integer( $key )) {
-						if (! $this->isDbRegular( $value ) && ! $this->isDbRegularPlus( $value )) return $this;
-					} else {
-						if (! $this->isDbRegular( $key ) && ! $this->isDbRegularPlus( $key )) return $this;
-						elseif (! in_array( $value, array( 'asc', 'desc' ), true )) return $this;
-					}
-				}
-				$sqls ['order'] = $datas;
-			} elseif (is_string( $datas ) && $datas != '') $sqls ['order'] = $datas;
 		}
 		return $this;
 	}
 	
 	/**
-	 * Model public function limit(null $datas)
-	 * Model public function limit(array $datas=array(integer $offset, integer $row))
-	 * Model public function limit(integer $datas)
-	 * Model public function limit(string $datas)
+	 * Model public function limit(string $data=null)
 	 */
-	public function limit($datas) {
+	public function limit(string $data = null) {
 		if ($this->database) {
-			$sqls = &$this->database->datas;
-			if (is_null( $datas )) unset( $sqls ['limit'] );
-			elseif (is_array( $datas ) && ! empty( $datas )) {
-				if (count( $datas ) != 2) return $this;
-				elseif (! $this->isIntSeq( array_keys( $datas ), true )) return $this;
-				list ( $offset, $row ) = array_values( $datas );
-				if (! is_integer( $offset ) or $offset <= 0) return $this;
-				elseif (! is_integer( $row ) or $row <= 0) return $this;
-				$sqls ['order'] = $datas;
-			} elseif (is_integer( $datas ) && $datas > 0) $sqls ['limit'] = $datas;
-			elseif (is_string( $datas ) && $datas != '') $sqls ['limit'] = $datas;
 		}
 		return $this;
 	}
@@ -332,17 +182,17 @@ class Model {
 	}
 	
 	/**
-	 * boolean|array public function select(void)
+	 * array public function select(void)
 	 */
 	public function select() {
-		return $this->database ? $this->database->select() : false;
+		return $this->database ? $this->database->select() : array();
 	}
 	
 	/**
-	 * boolean|scalar public function add(void)
+	 * integer public function add(void)
 	 */
 	public function add() {
-		return $this->database ? $this->database->insert( $this->datas ) : false;
+		return $this->database ? $this->database->insert( $this->datas ) : - 1;
 	}
 	
 	/**
@@ -423,6 +273,7 @@ class Model {
 	 * boolean protected function isDsn(array $datas=array(string $key=>string|integer $value,...))
 	 */
 	protected function isDsn($datas) {
+		
 		if (is_array( $datas ) && ! empty( $datas )) {
 			foreach ( $datas as $key => $value ) {
 				if (! in_array( $key, array( 'type', 'host', 'port', 'user', 'pwd', 'database', 'charset' ), true )) return false;
