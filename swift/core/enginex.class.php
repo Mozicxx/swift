@@ -59,7 +59,7 @@ class Enginex {
 		$path = implode( '/', array( C( 'app_path' ), $this->module, 'view', $url . 'tmpl' ) );
 		
 		$patternDesign='/<design id="()">(.*)</design>/i';
-		
+		$yes=?
 		
 	}
 	
