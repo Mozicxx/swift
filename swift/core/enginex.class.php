@@ -5,46 +5,72 @@ declare(strict_types = 1)
 namespace Swift;
 
 class Enginex {
+	/**
+	 * template_prototype="Prototype"
+	 * template_prototype_extension=".prototype.tmpl"
+	 * template_cache="Cache"
+	 * template_cache_extension=".cache.tmpl";
+	 */
+	protected $md5 = '';
+	protected $module = '';
+	protected $controller = '';
+	protected $view = '';
 	
 	/**
 	 * void public funtion __construct(string $url)
 	 */
 	public function __construct(string $url) {
-		list ( $this->module, $this->controller, $this->action ) = explode( '.', $url );
+		list ( $this->module, $this->controller, $this->view ) = explode( '.', $url );
 		$this->hash = md5( $url );
-	}
-	
-	/**
-	 */
-	protected function getTemplateUrl(string $name) {
-		$datas = explode( '.', $name );
-		if(count($datas)==2) list($controller, $action)=$datas;
-		elseif(count($datas)==1) list($action)=$datas;
-		else return '';
-		$keys=array('app_path', 'view_layer', 'template_extension');
-		list($app, $view, $extension)=C($keys);
-		$controller=$controller??$this->controller;
-		return implode('/', array($app, $this->module, $view, $controller, $action.$extension));
-	}
-	
-	/**
-	 */
-	protected function getMasterTemplateUrl(string $name) {
-		$keys = array( 'app_path', 'view_layer', 'template_master_layer', 'template_master_extension' );
-		list ( $appPath, $viewLayer, $masterLayer, $masterExtension ) = C( $keys );
-		return implode( '/', array( $app, $this->module, $view, $master, $name . $extension ) );
-	}
-	
-	/**
-	 * string protected function readTemplateData(string $url)
-	 */
-	protected function readTemplate(string $path) {
 	}
 	
 	/**
 	 * string public function compiler(void)
 	 */
 	public function compiler() {
+		$cacheOn = file_exists( $this->parseCachePath() );
+		if ($cacheOn && ! $this->appDebug) return $this->getCache();
+		$data = $this->getTemplate();
+	}
+	
+	/**
+	 * boolean protected function setCache(string $data)
+	 */
+	protected function setCache(string $data) {
+		$path = $this->parseCachePath();
+		return is_bool( file_put_contents( $path, $data ) ) ? false : true;
+	}
+	
+	/**
+	 * string protected function getCache(void)
+	 */
+	protected function getCache() {
+		$path = $this->parseCachePath();
+		return $this->getFile( $path );
+	}
+	
+	/**
+	 * string protected function parseCachePath(void)
+	 */
+	protected function parseCachePath(string $url) {
+		$pathSections = array( $this->appPath, $this->module, $this->viewLayer, $this->cache, $this->md5 . $this->cacheExtension );
+		return implode( '/', $pathSections );
+	}
+	
+	/**
+	 * string protected function getTemplate(void)
+	 */
+	protected function getTemplate() {
+		$path = $this->parseTemplatePath();
+		return $this->getFile( $path );
+	}
+	
+	/**
+	 * string protected function parseTemplatePath(void)
+	 */
+	protected function parseTemplatePath() {
+		$pathSections = array( $this->appPath, $this->module, $this->viewLayer, $this->controller, $this->view . $this->templateExtension );
+		return implode( '/', $pathSections );
 	}
 	
 	/**
@@ -52,15 +78,34 @@ class Enginex {
 	 */
 	protected function parsePrototype(string $data) {
 		$regular = '[a-z][a-z0-9_]*';
-		$patternMaster = '/<master url="(' . $regular . ')"><\/master>/i';
-		$masters = preg_match_all( $patternMaster, $data, $matchs, PREG_SET_ORDER );
+		$patternPrototype = '/<prototype url="(' . $regular . ')"><\/prototype>/';
+		$prototypesNum = preg_match_all( $patternMaster, $data, $matches1, PREG_SET_ORDER );
 		if ($masters !== 1) return $data;
-		$url = $matchs [0] [1];
-		$path = implode( '/', array( C( 'app_path' ), $this->module, 'view', $url . 'tmpl' ) );
+		$prototype = $this->readPrototypeContent( $matches1 [0] [1] );
 		
-		$patternDesign='/<design id="()">(.*)</design>/i';
-		$yes=?
-		
+		$patternDesign = '/<design id="(' . $regular . ')">(.*)<\/design>/';
+		$designsNum = preg_match_all( $patternDesign, $data, $matches2, PREG_PATTERN_ORDER );
+		$designs = $designsNum ? array_combine( $matchs2 [1], $matchs2 [2] ) : array();
+		return preg_replace_callback( $patternDesign, function ($matches) {
+			$key = $matches [1];
+			return designs[$key]??$matches[2]
+		}, $prototype );
+	}
+	
+	/**
+	 * string protected function getPrototype(string $url)
+	 */
+	protected function getPrototype($url) {
+		$path = $this->parsePrototypePath( $url );
+		return $this->getFile( $path );
+	}
+	
+	/**
+	 * string protected function parsePrototypePath(string $url)
+	 */
+	protected function parsePrototypePath(string $url) {
+		$pathSections = array( $this->appPath, $this->module, $this->viewLayer, $this->prototype, $url . $this->prototypeExtension );
+		return implode( '/', $pathSections );
 	}
 	
 	/**
@@ -93,8 +138,15 @@ class Enginex {
 		}, $data );
 	}
 	
+	/**
+	 * string protected function getFile(string $path)
+	 */
+	protected function getFile(string $path) {
+		if (file_exists( $path )) {
+			$data = @file_get_contents( $path );
+			return is_string( $data ) ? $data : '';
+		}
+		return '';
+	}
 	//
 }
-
-$e = new Enginex();
-echo $e->parseSysVar( 'hello,{$sys.server.userid}' );

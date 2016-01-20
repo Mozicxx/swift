@@ -21,4 +21,4 @@
 // if($var=array('12')) echo 'NOOOOOOOOOOOOOOOOOOO';
 // var_dump($var);
 
-print_r($_SERVER);
+var_dump(md5('code42.user.index'));
