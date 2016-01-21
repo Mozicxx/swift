@@ -1,7 +1,5 @@
 <?php
 
-	declare(strict_types=1);
-
 // $dsn="mysql:host=localhost;port=3306;dbname=html;charset=utf8";
 // $username='root';
 // $password='goodwin@000';
@@ -21,4 +19,14 @@
 // if($var=array('12')) echo 'NOOOOOOOOOOOOOOOOOOO';
 // var_dump($var);
 
-var_dump(md5('code42.user.index'));
+function parseLiteral($data) {
+		$pattern = '/<literal>(.*)<\/literal>/i';
+		return preg_replace_callback($pattern, function($matches){
+			$literals[]=$matches[1];
+			$key=count($literals)-1;
+			return '<literal>aa</literal>';
+		}, $data);
+	}
+	
+$data="<literal>luna</literal>rtrtrt<literal>tom</literal>";
+var_dump(parseLiteral($data));
