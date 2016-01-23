@@ -19,14 +19,4 @@
 // if($var=array('12')) echo 'NOOOOOOOOOOOOOOOOOOO';
 // var_dump($var);
 
-function parseLiteral($data) {
-		$pattern = '/<literal>(.*)<\/literal>/i';
-		return preg_replace_callback($pattern, function($matches){
-			$literals[]=$matches[1];
-			$key=count($literals)-1;
-			return '<literal>aa</literal>';
-		}, $data);
-	}
-	
-$data="<literal>luna</literal>rtrtrt<literal>tom</literal>";
-var_dump(parseLiteral($data));
+print_r($_SERVER);
