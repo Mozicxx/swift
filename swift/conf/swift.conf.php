@@ -4,9 +4,6 @@ return array (
 		/**
 		 */
 		'app_debug' => 'false',
-		'app_path' => './app',
-		'app_name' => 'app',
-		'app_namespace' => 'App',
 		
 		/**
 		 */

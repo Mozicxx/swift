@@ -1,4 +1,5 @@
 <?php
+declare(strict_types = 1);
 
 namespace Swift;
 
@@ -8,9 +9,9 @@ class Core {
 	 * Core protected function getSysFunc(void)
 	 */
 	protected function getSysFunc() {
-		$function = 'func';
+		$sysFunction = 'func';
 		$fileName = 'swift.func.php';
-		$path = implode( '/', array( swift_path, $function, $fileName ) );
+		$path = implode( '/', array( swift_path, $sysFunction, $fileName ) );
 		if (is_file( $path )) include $path;
 		return $this;
 	}
@@ -19,11 +20,11 @@ class Core {
 	 * Core protected function getSysConfig(void)
 	 */
 	protected function getSysConfig() {
-		$config = 'conf';
+		$sysConfig = 'conf';
 		$fileName = 'swift.conf.php';
-		$path = implode( '/', array( swift_path, $config, $fileName ) );
+		$path = implode( '/', array( swift_path, $sysConfig, $fileName ) );
 		if (is_file( $path )) {
-			$configs = include $path
+			$configs = include $path;
 			if (is_array( $configs )) {
 				foreach ( $configs as $key => $value ) {
 					C( $key, $value );
@@ -42,10 +43,11 @@ class Core {
 		if (is_dir( $path )) {
 			$files = scandir( $path );
 			foreach ( $files as $file ) {
-				$file = $dir . $depr . $value;
-				if (is_file( $file ) && ('.class.php' == substr( $value, - 10 )) && ('core.class.php' != $value)) {
-					require $file;
-				}
+				$filePath = implode( '/', array( $path, $file ) );
+				if (! is_file( $filePath )) continue;
+				elseif ('core.class.php' == $file) continue;
+				elseif (strtolower( substr( $file, - 10 ) ) != '.class.php') continue;
+				require $file;
 			}
 		}
 		return $this;
@@ -60,8 +62,10 @@ class Core {
 		if (is_dir( $path )) {
 			$files = scandir( $path );
 			foreach ( $files as $file ) {
-				$filePath=implode('/',array($path, $file))
-				if (is_file( $filePath ) && strotolower( substr( $file, - 4 ) ) == '.php') include $filePath;
+				$filePath = implode( '/', array( $path, $file ) );
+				if (! is_file( $filePath )) continue;
+				elseif (strtolower( substr( $file, - 4 ) ) != '.php') continue;
+				include $filePath;
 			}
 		}
 		return $this;

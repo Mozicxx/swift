@@ -1,15 +1,11 @@
 <?php
+declare(strict_types = 1);
 
 /**
  */
-$version = '5.5.0';
-if (version_compare ( PHP_VERSION, $version, '<' )) {
-	die ( 'Current PHP version is ' . PHP_VERSION . ' ,require PHP version greater than ' . $version );
-}
-
-/**
- */
-define ( 'swift_path', './swift' );
+$version = '7.0.2';
+$message = 'Current PHP version is ' . PHP_VERSION . ' ,require PHP version greater than ' . $version;
+if (version_compare( PHP_VERSION, $version, '<' )) die( $message );
 
 /**
  */

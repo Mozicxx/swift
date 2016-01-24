@@ -19,4 +19,4 @@
 // if($var=array('12')) echo 'NOOOOOOOOOOOOOOOOOOO';
 // var_dump($var);
 
-print_r($_SERVER);
+phpinfo();
