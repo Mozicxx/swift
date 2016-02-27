@@ -19,4 +19,6 @@
 // if($var=array('12')) echo 'NOOOOOOOOOOOOOOOOOOO';
 // var_dump($var);
 
-phpinfo();
+$data=" ";
+echo md5($data);
+echo md5($data);
