@@ -24,6 +24,27 @@ abstract class controller {
 	}
 	
 	/**
+	 * public function __get($name)
+	 */
+	public function __get($name) {
+		return $this->get ( $name );
+	}
+	
+	/**
+	 * public function __set($name, $value)
+	 */
+	public function __set($name, $value) {
+		$this->view->assing ( $name, $value );
+	}
+	
+	/**
+	 * public function __isset($name)
+	 */
+	public function __isset($name) {
+		return $this->view->get ( $name );
+	}
+	
+	/**
 	 * public function display($data, $type, $charset)
 	 */
 	public function display($data, $type = null, $charset = null) {
@@ -55,18 +76,10 @@ abstract class controller {
 	
 	/**
 	 * public function assign($name, $value)
-	 * public function assing($vars)
 	 */
 	public function assign($name, $value = null) {
 		$this->view->assign ( $name, $value );
 		return $this;
-	}
-	
-	/**
-	 * public function __set($name, $value)
-	 */
-	public function __set($name, $value) {
-		$this->view->assing ( $name, $value );
 	}
 	
 	/**
@@ -76,19 +89,7 @@ abstract class controller {
 		return $this->view->get ( $name );
 	}
 	
-	/**
-	 * public function __get($name)
-	 */
-	public function __get($name) {
-		return $this->get ( $name );
-	}
-	
-	/**
-	 * public function __isset($name)
-	 */
-	public function __isset($name) {
-		return $this->view->get ( $name );
-	}
+
 	
 	//
 }
