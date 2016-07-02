@@ -1,6 +1,5 @@
 <?php
-declare(strict_types = 1)
-	;
+declare(strict_types = 1);
 
 namespace Swift;
 
@@ -20,31 +19,38 @@ class View {
 	}
 	
 	/**
-	 * void public functioin display(string $template='', string $type='', string $charset='')
+	 * void public fnnction __destruct(void)
 	 */
-	public function display(string $template = '', string $type = '', string $charset = '') {
-		$data = $this->fetch( $template );
+	public function __destruct() {
+		//
+	}
+	
+	/**
+	 * void public function display(string $url=null, string $type=null, string $charset=null)
+	 */
+	public function display(string $url = null, string $type = null, string $charset = null) {
+		$data = $this->fetch( $url );
 		$this->render( $data, $type, $charset );
 	}
 	
 	/**
-	 * void public function show(string $data, string $data='', string $charset='')
+	 * void public function show(string $data, string $type=null, string $charset=null)
 	 */
-	public function show(string $data, string $type = '', string $charset = '') {
+	public function show(string $data, string $type = null, string $charset = null) {
 		$this->render( $data, $type, $charset );
 	}
 	
 	/**
-	 * protected function fetch(string $template)
+	 * string public function fetch(string url)
 	 */
-	protected function fetch(string $template) {
-		$tmplEngine = C( 'template_engine' );
-		$path = $this->parseTemplatePath( $template );
+	public function fetch(string $url): string {
+		$engine = C( 'template_engine' );
+		$path = $this->getTemplatePath( $url );
 		ob_start();
 		ob_implicit_flush( false );
 		extract( $this->vars, EXTR_OVERWRITE );
-		switch ($tmplEngine) {
-			case 'swift' :
+		switch ($engine) {
+			case 'sharp' :
 				
 				break;
 			case 'php' :
@@ -58,76 +64,89 @@ class View {
 	}
 	
 	/**
+	 * boolean public function assign(string $name, mixed $value)
+	 */
+	public function assign(string $name, $value): bool {
+		$pattern = '/^[a-z_][a-z0-9_]*$/i';
+		if (preg_match( $pattern, $name )) {
+			$this->vars [$name] = $value;
+			return true;
+		}else return false;
+	}
+	
+	/**
+	 * integer public function assigns(array $vars)
+	 */
+	public function assigns(array $vars): int {
+		$counter=0;
+		$pattern = '/^[a-z_][a-z0-9_]*$/i';
+		foreach ( $vars as $name => $value ) {
+			if (preg_match( $pattern, $name )) {
+				$this->vars [$name] = $value;
+				$counter++;
+			}
+		}
+		return $counter;
+	}
+	
+	/**
+	 * mixed public function get(string $name)
+	 */
+	public function get(string $name) {
+		return $this->vars[$name] ?? null;
+	}
+	
+	/**
+	 * array public function gets()
+	 */
+	 public function gets(): array {
+		 return $this->vars;
+	 }
+	
+	/**
 	 * void protected function render(string $data, string $type, string $charset)
 	 */
 	protected function render(string $data, string $type, string $charset) {
-		$templateDefaultType != '' ?: C( 'template_default_type' );
-		$tmplDefaultCharset != '' ?: C( 'template_default_charset' );
+		$templateType= $type ?? C( 'template_default_type' );
+		$templateCharset != $charset ?? C( 'template_default_charset' );
 		$httpCacheControl = C( 'http_cache_control' );
-		header( 'Content-Type:' . $tmplDefaultType . '; charset=' . $tmplDefaultCharset );
+		header( 'Content-Type:' . $templateType . '; charset=' . $templateCharset );
 		header( 'Cache-Control: ' . $httpCacheControl );
 		echo $data;
 	}
 	
 	/**
-	 * string protected function parseTemplate(string $url)
+	 * string protected function getTemplatePath(string $url=null)
 	 */
-	protected function parseTemplatePath(string $url) {
+	protected function getTemplatePath(string $url=null): string {
 		$viewLayer = C( 'view_layer' );
 		$templateSuffix = C( 'template_suffix' );
-		$path404 = implode( '/', array( swift_path, 'view', '404.html' ) );
+		$errPath = implode( '/', array( swift_path, 'view', '404.html' ) );
 		
-		if ($url != '') {
+		if(!is_null($url)){
 			$name = '[a-z]+([A-Z][a-z]+)*';
 			$pattern = '/' . $name . '(\.' . $name . '){0,2}/';
 			if (preg_match( $pattern, $url )) {
-				$urlSections = explode( '.', $this->camelToUnderline( $url ) );
+				$urlSections = explode( '.', $this->ctu( $url ) );
 				$num = count( $urlSections );
 				if (3 == $num) list ( $this->module, $this->controller, $this->action ) = $urlSections;
 				elseif (2 == $num) list ( $this->controller, $this->action ) = $urlSections;
 				elseif (1 == $num) list ( $this->action ) = $urlSections;
-			} else
-				return $path404;
+			} else return $errPath;
 		}
 		
 		$path = implode( '/', array( app_path, $this->module, $viewLayer, $this->controller, $this->action . $templateSuffix ) );
-		return is_file( $path ) ? $path : $path404;
+		return is_file( $path ) ? $path : $errPath;
 	}
 	
 	/**
-	 * string protected function caseToUnderline(string $data)
+	 * string protected function ctu(string $data)
 	 */
-	protected function camelToUnderline(string $data) {
+	protected function ctu(string $data): string {
 		$pattern = '/[A-Z]/';
-		return preg_replace_callback($pattern, function($matches){
-			return '_' . $matches[0];
-		} $data);
-	}
-	
-	/**
-	 * void public function assign(string $name, mixed $value)
-	 */
-	public function assign(string $name, $value) {
-		$pattern = '/^[a-z_][a-z0-9_]*$/i';
-		if (preg_match( $pattern, $key )) $this->vars [$key] = $value;
-	}
-	
-	/**
-	 * void public function assigns(array $vars)
-	 */
-	public function assigns(array $vars) {
-		$pattern = '/^[a-z_][a-z0-9_]*$/i';
-		foreach ( $vars as $key => $value ) {
-			if (preg_match( $pattern, $key )) $this->vars [$key] = $value;
-		}
-	}
-	
-	/**
-	 * mixed public function get(string $name=null)
-	 */
-	public function get(string $name = null) {
-		if (is_null( $name )) return $this->vars;
-		return $this->vars[$name] ?? null;
+		return preg_replace_callback($pattern, function(array $matches){
+			return '_' . strtolower($matches[0]);
+		}, $data);
 	}
 	//
 }
