@@ -34,9 +34,9 @@ class View {
 	}
 	
 	/**
-	 * void public function show(string $data, string $type=null, string $charset=null)
+	 * void public function output(string $data, string $type=null, string $charset=null)
 	 */
-	public function show(string $data, string $type = null, string $charset = null) {
+	public function output(string $data, string $type = null, string $charset = null) {
 		$this->render( $data, $type, $charset );
 	}
 	
@@ -44,14 +44,14 @@ class View {
 	 * string public function fetch(string url)
 	 */
 	public function fetch(string $url): string {
-		$engine = C( 'template_engine' );
+		$templateEngine = C( 'template_engine' );
 		$path = $this->getTemplatePath( $url );
 		ob_start();
 		ob_implicit_flush( false );
 		extract( $this->vars, EXTR_OVERWRITE );
 		switch ($engine) {
 			case 'sharp' :
-				
+				//
 				break;
 			case 'php' :
 				include $path;
@@ -107,8 +107,8 @@ class View {
 	 * void protected function render(string $data, string $type, string $charset)
 	 */
 	protected function render(string $data, string $type, string $charset) {
-		$templateType= $type ?? C( 'template_default_type' );
-		$templateCharset != $charset ?? C( 'template_default_charset' );
+		$templateType = $type ?? C( 'template_default_type' );
+		$templateCharset = $charset ?? C( 'template_default_charset' );
 		$httpCacheControl = C( 'http_cache_control' );
 		header( 'Content-Type:' . $templateType . '; charset=' . $templateCharset );
 		header( 'Cache-Control: ' . $httpCacheControl );

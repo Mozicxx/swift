@@ -154,21 +154,20 @@ class Mysql {
 	/**
 	 * integer public function cmd(string $sql)
 	 */
-	public function cmd(string $sql) {
+	public function cmd(string $sql): int {
 		$this->sql = $sql;
 		if (! $this->link( self::operate_write )) return - 1;
 		$this->ds = $this->link->prepare( $this->sql );
 		if ($this->ds && $this->ds->execute()) {
 			$this->id = ( int ) $this->link->lastInsertId();
 			return $this->ds->rowCount();
-		} else
-			return - 1;
+		} else return - 1;
 	}
 	
 	/**
 	 * array public function query(string $sql)
 	 */
-	public function query(string $sql) {
+	public function query(string $sql): array {
 		$this->sql = $sql;
 		if (! $this->link( self::operate_read )) return array();
 		$this->ds = $this->link->prepare( $this->sql );
@@ -340,20 +339,20 @@ class Mysql {
 	}
 	
 	/**
-	 * boolean protected function isIntSeq(array $datas [,boolean $mode=false])
+	 * boolean protected function isIntSeq(array $datas ,boolean $mode=false)
 	 */
-	protected function isIntSeq(array $datas, bool $mode = false) {
-		$values = $mode ? array_filter( array_values( $datas ), 'is_integer' ) : array_values( $datas );
-		foreach ( $values as $key => $value ) {
+	protected function isIntSeq(array $datas, bool $mode = false): bool {
+		$datas = $mode ? array_filter( array_values( $datas ), 'is_integer' ) : array_values( $datas );
+		foreach ( $datas as $key => $value ) {
 			if ($key !== $value) return false;
 		}
 		return true;
 	}
 	
 	/**
-	 * boolean protected function isStrSeq(array $datas [,boolean $mode=false])
+	 * boolean protected function isStrSeq(array $datas ,boolean $mode=false)
 	 */
-	protected function isStrSeq(string $datas, bool $mode = false) {
+	protected function isStrSeq(string $datas, bool $mode = false): bool {
 		$datas = array_values( $datas );
 		foreach ( $datas as $value ) {
 			if (! is_string( $value )) return false;
