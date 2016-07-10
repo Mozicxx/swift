@@ -1,5 +1,6 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types = 1)
+	;
 
 namespace Swift;
 
@@ -11,13 +12,13 @@ class Mysql {
 	const operate_both = 'both';
 	protected $id = 0;
 	protected $sql = '';
-	protected $error = '';
+	protected $error = null;
 	protected $datas = array();
 	protected $links = array( 'read' => null, 'write' => null );
 	protected $ds = null;
 	protected $options = array( PDO::ATTR_CASE => PDO::CASE_LOWER, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_ORACLE_NULLS => PDO::NULL_NATURAL, PDO::ATTR_STRINGIFY_FETCHES => false );
 	protected $configs = array();
-	protected $errorConfigs = array();
+	protected $errConfigs = array();
 	
 	/**
 	 * void public function __construct(array $configs)
@@ -26,9 +27,8 @@ class Mysql {
 		if (! $configs) return;
 		elseif (! $this->isIntSeq( array_keys( $configs ), true )) return;
 		foreach ( $configs as $config ) {
-			if (! $this->isDsn( $config )) return;
+			if($this->isConfig($config)) $this->configs[]=$config;
 		}
-		$this->configs = $configs;
 	}
 	
 	/**
@@ -48,34 +48,40 @@ class Mysql {
 	/**
 	 * array protected function dsn(string $rw)
 	 */
-	protected function dsn($rw) {
-		$configs = array();
-		foreach ( $this->configs as $index => $config ) {
-			if (in_array( $config ['operate'], array( $rw, self::operate_both ) ) && ! in_array( $key, $this->errConfigs )) $configs [$index] = $config;
-		}
-		if ($configs) {
-			$key = array_rand( $configs );
-			extract( $configs [$key] );
-			$dsn = array( 'host=' . $host, 'port=' . ( string ) $port, 'dbname=' . $dbname, 'charset=' . $charset );
-			return array( $key, $type . ':' . implode( ';', $dsn ), $username, $password );
-		}
-		return array();
+	protected function dsn(string $rw): array 
+
+
+
+{
+	$configs = array ();
+	foreach ( $this->configs as $key => $config ) {
+		$operate = in_array ( $config ['operate'], array ($rw,self::operate_both ), true );
+		$err = in_array ( $key, $this->errConfigs, true );
+		if ($operate && ! $err) $configs [$key] = $config;
 	}
+	if ($configs) {
+		$key = array_rand ( $configs );
+		extract ( $configs [$key] );
+		$dsn = array ('host=' . $host,'port=' . ( string ) $port,'dbname=' . $dbname,'charset=' . $charset );
+		return array ($key,$type . ':' . implode ( ';', $dsn ),$username,$password );
+	}
+	return array ();
+}
 	
 	/**
-	 * boolean protected function link(string $rw);
+	 * boolean protected function link(string $rw)
 	 */
-	protected function link($rw) {
+	protected function link(string $rw): bool {
 		if ($this->link [$rw]) return true;
-		$config = $this->dsn( $rw );
-		if ($config) list ( $key, $dsn, $username, $password ) = $config;
+		$params = $this->dsn( $rw );
+		if ($params) list ( $key, $dsn, $username, $password ) = $params;
 		else return false;
 		try {
 			$this->link [$rw] = new \PDO( $dsn, $username, $password, $this->options );
 			$this->errConfigs = array();
 			return true;
 		} catch ( \PDOException $e ) {
-			// E($e->getMessage())
+			E($e->getMessage())
 			$this->errConfigs [] = $key;
 			return $this->link( $rw );
 		}
@@ -99,7 +105,7 @@ class Mysql {
 	/**
 	 * boolean public function begin(void);
 	 */
-	public function begin() {
+	public function begin(): bool {
 		if (! $this->link( self::operate_write )) return false;
 		elseif ($this->links [self::operate_write]->inTransaction()) return false;
 		return $this->links [self::operate_write]->beginTransaction();
@@ -108,16 +114,16 @@ class Mysql {
 	/**
 	 * boolean public function end(void)
 	 */
-	public function end() {
+	public function end(): bool {
 		if (! $this->links [self::operate_write]) return false;
 		elseif (! $this->links [self::operate_write]->inTransaction()) return false;
 		return $this->links [self::operate_write]->commit();
 	}
 	
 	/**
-	 * boolean public function rollback();
+	 * boolean public function rollback(void);
 	 */
-	public function rollback() {
+	public function rollback(): bool {
 		if (! $this->links [self::operate_write]) return false;
 		elseif (! $this->links [self::operate_write]->inTransaction()) return false;
 		return $this->links [self::operate_write]->rollback();
@@ -126,19 +132,30 @@ class Mysql {
 	/**
 	 * string public function error(void)
 	 */
-	public function error() {
-		$this->error = $this->ds ? implode( ':', $this->ds->errorInfo() ) : '';
+	public function error(): string {
+		$this->error = $this->ds ? implode( ':', $this->ds->errorInfo() ) : null;
 		return $this->error;
 	}
 	
 	/**
-	 * boolean public function data(string $key [,string $value])
+	 * boolean public function data(string $key, string $value)
 	 */
-	public function data(string $key, string $value = null) {
+	public function data(string $key, string $value): bool {
 		$keysRegular = array( 'distinct', 'field', 'table', 'join', 'where', 'group', 'having', 'order', 'limit' );
 		if (in_array( $key, $keysRegular, true )) {
-			if (is_null( $value )) unset( $this->datas [$key] );
-			else $this->datas [$key] = $value;
+			$this->datas [$key] = $value;
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * boolean public function clearData(string $key)
+	 */
+	public function clearData(string $key): bool {
+		$keysRegular = array( 'distinct', 'field', 'table', 'join', 'where', 'group', 'having', 'order', 'limit' );
+		if (in_array( $key, $keysRegular, true )) {
+			unset($this->datas [$key]);
 			return true;
 		}
 		return false;
@@ -158,10 +175,7 @@ class Mysql {
 		$this->sql = $sql;
 		if (! $this->link( self::operate_write )) return - 1;
 		$this->ds = $this->link->prepare( $this->sql );
-		if ($this->ds && $this->ds->execute()) {
-			$this->id = ( int ) $this->link->lastInsertId();
-			return $this->ds->rowCount();
-		} else return - 1;
+		return $this->ds && $this->ds->execute() ? $this->ds->rowCount() : -1;
 	}
 	
 	/**
@@ -178,62 +192,64 @@ class Mysql {
 	 * array public function select(void)
 	 */
 	public function select() {
-		$sqls = array( 'select', $this->distinct, $this->column, 'from', $this->table, $this->join, $this->where, $this->group, $this->having, $this->order, $this->limit );
-		$sqls = array_filter( $sqls, 'strlen' );
-		return $this->query( implode( ' ', $sqls ) );
+		$sqlSections = array( 'select', $this->distinct, $this->column, 'from', $this->table, $this->join, $this->where, $this->group, $this->having, $this->order, $this->limit );
+		$sql=implode(' ', array_filter($sqlSections, 'strlen'));
+		return $this->query( $sql );
 	}
 	
 	/**
-	 * integer public function insert(array $datas=array(string $field=>scalar $value,...))
+	 * integer public function insert(array $datas=array(string $field=>scalar $data,...))
 	 */
-	public function insert(array $datas) {
+	public function insert(array $datas): int {
 		$datas = $this->shell( $datas );
 		if (! $datas) return 0;
 		$keyStr = implode( ',', array_keys( $datas ) );
 		$valueStr = implode( ',', array_values( $datas ) );
-		$sqls = array( 'insert', 'into', $this->table . '(' . $keyStr . ')', 'values(' . $valueStr . ')' );
-		$sqls = array_filter( $sqls, 'strlen' );
-		return $this->cmd( implode( ' ', $sqls ) );
+		$sqlSections = array( 'insert', 'into', $this->table . '(' . $keyStr . ')', 'values(' . $valueStr . ')' );
+		$sql=implode(' ', $sqlSections);
+		return $this->cmd($sql);
 	}
 	
 	/**
-	 * integer public function update(array $datas=array(string $field=>scalar $value,...))
+	 * integer public function update(array $datas=array(string $field=>scalar $data,...))
 	 */
-	public function update(array $datas) {
+	public function update(array $datas): int {
 		$datas = $this->shell( $datas );
 		if (! $datas) return 0;
-		foreach ( $regulars as $key => &$value ) {
+		foreach ( $datas as $key => &$value ) {
 			$value = $key . '=' . $value;
 		}
-		$dataStr = implode( ',', $regulars );
-		$sqls = array( 'update', $this->table, 'set', $dataStr, $this->where, $this->order, $this->limit );
-		$sqls = array_filter( $sqls, 'strlen' );
-		return $this->cmd( implode( ' ', $sqls ) );
+		$dataStr = implode( ',', $datas );
+		$sqlSections = array( 'update', $this->table, 'set', $dataStr, $this->where, $this->order, $this->limit );
+		$sql=implode(' ', array_filter($sqlSections, 'strlen'));
+		return $this->cmd( $sql );
 	}
 	
 	/**
 	 * integer public function delete(void)
 	 */
-	public function delete() {
-		$sqls = array( 'delete', 'from', $this->table, $this->where, $this->order, $this->limit );
-		$sqls = array_filter( $sqls, 'strlen' );
-		return $this->cmd( implode( ' ', $sqls ) );
+	public function delete(): int {
+		$sqlSections = array( 'delete', 'from', $this->table, $this->where, $this->order, $this->limit );
+		$sql=implode(' ', array_filter($sqlSections, 'strlen'));
+		return $this->cmd( $sql );
 	}
 	
 	/**
-	 * array protected function shell(array $datas=array(string $field=>scalar $value,...))
+	 * array protected function shell(array $datas=array(string $field=>scalar $data,...))
 	 */
-	protected function shell(array $datas) {
+	protected function shell(array $datas): array {
 		if (! $datas) return array();
 		elseif (! $this->isIntSeq( array_keys( $datas ), true )) return array();
 		$regulars = array();
 		foreach ( $datas as $key => $value ) {
-			$key = backquote( $key );
+			
+			$key = $this->backquote( $key );
 			if (is_integer( $value ) or is_float( $value )) $value = ( string ) $value;
 			elseif (is_string( $value )) {
 				$pattern = '/\{(.*)\}/';
 				$value = preg_match( $pattern, $value, $matchs ) ? $value = $matchs [1] : "'" . htmlspecialchars( $value ) . "'";
-			} elseif (is_bool( $value )) $value = $value ? '1' : '0';
+			} 
+			elseif (is_bool( $value )) $value = $value ? '1' : '0';
 			elseif (is_null( $value )) $value = 'null';
 			else return array();
 			$regulars [$key] = $value;
@@ -275,32 +291,32 @@ class Mysql {
 	/**
 	 * string protected backquote(string $data)
 	 */
-	protected function backquote(string $data) {
-		$datas = explode( '.', $data );
-		foreach ( $datas as &$value ) {
+	protected function backquote(string $data): string {
+		$dataSections = explode( '.', $data );
+		foreach ( $dataSections as &$value ) {
 			$value = '`' . $value . '`';
 		}
-		return implode( '.', $datas );
+		return implode( '.', $dataSections );
 	}
 	
 	/**
 	 * string public function lastSql(void)
 	 */
-	public function lastSql() {
+	public function lastSql(): string {
 		return $this->sql;
 	}
 	
 	/**
 	 * integer public function lastId(void)
 	 */
-	public function lastId() {
+	public function lastId(): int {
 		return $this->id;
 	}
 	
 	/**
 	 * boolean protected function isDbRegular(string $data)
 	 */
-	protected function isDbRegular(string $data) {
+	protected function isDbRegular(string $data): bool {
 		$pattern = '/^([a-z]+_)*[a-z]+$/';
 		return preg_match( $pattern, $data ) ? true : false;
 	}
@@ -308,7 +324,7 @@ class Mysql {
 	/**
 	 * boolean protected function isDbRegularPlus(string $data)
 	 */
-	protected function isDbRegularPlus(string $data) {
+	protected function isDbRegularPlus(string $data): bool {
 		$datas = explode( '.', $data );
 		if (count( $datas ) != 2) return false;
 		foreach ( $datas as $value ) {
@@ -318,22 +334,14 @@ class Mysql {
 	}
 	
 	/**
-	 * boolean protected function isCamelCaseRegular(string $data)
+	 * boolean protected function isConfig(array $datas=array(string $param=>string|integer $data,...))
 	 */
-	protected function isCamelCaseRegular(string $data) {
-		$pattern = '/^[a-z]+([A-Z][a-z]*)*$/';
-		return preg_match( $pattern, $data ) ? true : false;
-	}
-	
-	/**
-	 * boolean protected function isDsn(array $datas=array(string $key=>string|integer $value,...))
-	 */
-	protected function isDsn(array $datas) {
+	protected function isConfig(array $datas) {
 		if (count( $datas ) != 8) return false;
 		foreach ( $datas as $key => $value ) {
-			if (! in_array( $key, array( 'operate', 'type', 'host', 'port', 'user', 'pwd', 'database', 'charset' ), true )) return false;
-			elseif ('port' == $value && ! is_integer( $value )) return false;
-			elseif (! is_string( $value ) or '' == $value) return false;
+			if (! in_array( $key, array( 'operate', 'type', 'host', 'port',  'database', 'charset', 'username', 'password'), true )) return false;
+			elseif ('port' == $key && ! is_integer( $value )) return false;
+			elseif (! is_string( $value )) return false;
 		}
 		return true;
 	}
@@ -350,13 +358,13 @@ class Mysql {
 	}
 	
 	/**
-	 * boolean protected function isStrSeq(array $datas ,boolean $mode=false)
+	 * boolean protected function isStrSeq(array $datas, boolean $mode = false)
 	 */
 	protected function isStrSeq(string $datas, bool $mode = false): bool {
 		$datas = array_values( $datas );
 		foreach ( $datas as $value ) {
 			if (! is_string( $value )) return false;
-			elseif ($mode && '' == $value) return false;
+			elseif ($mode && ''==$value) return false;
 		}
 		return true;
 	}
