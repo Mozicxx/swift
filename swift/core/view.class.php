@@ -1,126 +1,152 @@
 <?php
+declare(strict_types = 1);
 
 namespace Swift;
 
 class View {
-	protected $vars = array ();
+	protected $module;
+	protected $controller;
+	protected $action;
+	protected $vars = array();
 	
 	/**
-	 * public function __construct()
+	 * void public function __construct(void)
 	 */
 	public function __construct() {
-		//
+		$this->module = module_name;
+		$this->controller = controller_name;
+		$this->action = action_name;
 	}
 	
 	/**
-	 * public function __destruct()
+	 * void public fnnction __destruct(void)
 	 */
 	public function __destruct() {
 		//
 	}
 	
 	/**
-	 * public functioin display()
+	 * void public function display(string $url=null, string $type=null, string $charset=null)
 	 */
-	public function display($template = null, $type = null, $charset = null) {
-		$data = $this->fetch ( $template );
-		$this->render ( $data, $type, $charset );
+	public function display(string $url = null, string $type = null, string $charset = null) {
+		$data = $this->fetch( $url );
+		$this->render( $data, $type, $charset );
 	}
 	
 	/**
-	 * public function show()
+	 * void public function output(string $data, string $type=null, string $charset=null)
 	 */
-	public function show($data, $type = null, $charset = null) {
-		$this->render ( $data, $type, $charset );
+	public function output(string $data, string $type = null, string $charset = null) {
+		$this->render( $data, $type, $charset );
 	}
 	
 	/**
-	 * public function fetch($template)
+	 * string public function fetch(string url)
 	 */
-	protected function fetch($template) {
-		$template = $this->parseTemplate ( $template );
-		if (! is_file ( $template )) {
-			//
-		}
-		ob_start ();
-		ob_implicit_flush ( false );
-		$engine = C ( 'template_engine' );
+	public function fetch(string $url): string {
+		$templateEngine = C( 'template_engine' );
+		$path = $this->getTemplatePath( $url );
+		ob_start();
+		ob_implicit_flush( false );
+		extract( $this->vars, EXTR_OVERWRITE );
 		switch ($engine) {
-			case 'swift' :
+			case 'sharp' :
 				//
 				break;
 			case 'php' :
-				extract ( $this->vars, EXTR_OVERWRITE );
-				include $template;
+				include $path;
 				break;
 			default :
-				//
+				include $path;
 				break;
 		}
-		return ob_get_clean ();
+		return ob_get_clean();
 	}
 	
 	/**
-	 * protected function render($data, $type, $charset)
+	 * boolean public function assign(string $name, mixed $value)
 	 */
-	protected function render($data, $type, $charset) {
-		! is_null ( $type ) ?  : $type = C ( 'template_default_type' );
-		! is_null ( $charset ) ?  : $charset = C ( 'template_default_charset' );
-		header ( 'Content-Type:' . $type . '; charset=' . $charset );
-		header ( 'Cache-Control: ' . C ( 'http_cache_control' ) );
+	public function assign(string $name, $value): bool {
+		$pattern = '/^[a-z_][a-z0-9_]*$/i';
+		if (preg_match( $pattern, $name )) {
+			$this->vars [$name] = $value;
+			return true;
+		}else return false;
+	}
+	
+	/**
+	 * integer public function assigns(array $vars)
+	 */
+	public function assigns(array $vars): int {
+		$counter=0;
+		$pattern = '/^[a-z_][a-z0-9_]*$/i';
+		foreach ( $vars as $name => $value ) {
+			if (preg_match( $pattern, $name )) {
+				$this->vars [$name] = $value;
+				$counter++;
+			}
+		}
+		return $counter;
+	}
+	
+	/**
+	 * mixed public function get(string $name)
+	 */
+	public function get(string $name) {
+		return $this->vars[$name] ?? null;
+	}
+	
+	/**
+	 * array public function gets()
+	 */
+	 public function gets(): array {
+		 return $this->vars;
+	 }
+	
+	/**
+	 * void protected function render(string $data, string $type, string $charset)
+	 */
+	protected function render(string $data, string $type, string $charset) {
+		$templateType = $type ?? C( 'template_default_type' );
+		$templateCharset = $charset ?? C( 'template_default_charset' );
+		$httpCacheControl = C( 'http_cache_control' );
+		header( 'Content-Type:' . $templateType . '; charset=' . $templateCharset );
+		header( 'Cache-Control: ' . $httpCacheControl );
 		echo $data;
 	}
 	
 	/**
-	 * protected function parseTemplate($template)
+	 * string protected function getTemplatePath(string $url=null)
 	 */
-	protected function parseTemplate($template) {
-		$app = app_path;
-		$module = module_name;
-		$controller = controller_name;
-		$action = action_name;
-		$view = C ( 'view_layer' );
-		$suffix = C ( 'template_suffix' );
+	protected function getTemplatePath(string $url=null): string {
+		$viewLayer = C( 'view_layer' );
+		$templateSuffix = C( 'template_suffix' );
+		$errPath = implode( '/', array( swift_path, 'view', '404.html' ) );
 		
-		if (null != $template) {
-			$arr = explode ( '.', $template );
-			switch (count ( $arr )) {
-				case 3 :
-					list ( $module, $controller, $action ) = $arr;
-					break;
-				case 2 :
-					list ( $controller, $action ) = $arr;
-					break;
-				case 1 :
-					list ( $action ) = $arr;
-					break;
-				default :
-					//
-					break;
-			}
+		if(!is_null($url)){
+			$name = '[a-z]+([A-Z][a-z]+)*';
+			$pattern = '/' . $name . '(\.' . $name . '){0,2}/';
+			if (preg_match( $pattern, $url )) {
+				$urlSections = explode( '.', $this->ctu( $url ) );
+				$num = count( $urlSections );
+				if (3 == $num) list ( $this->module, $this->controller, $this->action ) = $urlSections;
+				elseif (2 == $num) list ( $this->controller, $this->action ) = $urlSections;
+				elseif (1 == $num) list ( $this->action ) = $urlSections;
+			} else return $errPath;
 		}
-		$depr = '/';
-		$template = $app . $depr . $module . $depr . $view . $depr . $controller . $depr . $action . $suffix;
-		return $template;
-	}
-	/**
-	 * public function assign($name, $value)
-	 * public function assign($vars)
-	 */
-	public function assign($name, $value = null) {
-		is_array ( $name ) ? $this->vars = array_merge ( $this->vars, $name ) : $this->vars [$name] = $value;
+		
+		$path = implode( '/', array( app_path, $this->module, $viewLayer, $this->controller, $this->action . $templateSuffix ) );
+		return is_file( $path ) ? $path : $errPath;
 	}
 	
 	/**
-	 * public function get()
-	 * public function get($name)
+	 * string protected function ctu(string $data)
 	 */
-	public function get($name = null) {
-		if (is_null ( $name )) {
-			return $this->vars;
-		}
-		return isset ( $this->vars [$name] ) ? $this->vars [$name] : null;
+	protected function ctu(string $data): string {
+		$pattern = '/[A-Z]/';
+		return preg_replace_callback($pattern, function(array $matches){
+			return '_' . strtolower($matches[0]);
+		}, $data);
 	}
-	
 	//
 }

@@ -1,0 +1,10 @@
+Namespace: Swift
+Class: Model
+Description:
+
+Method:
+
+		Public:
+			
+				1: Model public function distinct(boolean $data=null)
+				

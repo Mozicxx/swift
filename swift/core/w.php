@@ -1,16 +1,24 @@
 <?php
 
-// $dsn='mysql:host=localhost;port=3306;dbname=html;charset=utf8';
+// $dsn="mysql:host=localhost;port=3306;dbname=html;charset=utf8";
 // $username='root';
 // $password='goodwin@000';
-// $link = new \PDO( $dsn, $username, $password );
-// $stmt=$link->prepare('select * from cc');
-// $ds=$stmt->execute();
-// print $ds? 'yes':'no';
+// $database=new PDO($dsn, $username, $password);
+// var_dump($database->lastInsertId());
+// $sql="insert into ko(name) values('luna')";
+// $ds=$database->prepare($sql);
+// $result=$ds->execute();
+// var_dump($database->lastInsertId());
+// $sql="delete from ko0";
+// $ds=$database->prepare($sql);
+// $result=$ds->execute();
+// var_dump((int)$database->lastInsertId());
 
-// $aaa['中国']='aaa';
-// print_r($aaa);
-// phpinfo();
+// echo '-----<br />';
 
-$arr=array(null);
-var_dump(implode(':',$arr));
+// if($var=array('12')) echo 'NOOOOOOOOOOOOOOOOOOO';
+// var_dump($var);
+
+$data=" ";
+echo md5($data);
+echo md5($data);

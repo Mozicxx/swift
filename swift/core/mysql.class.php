@@ -1,4 +1,5 @@
 <?php
+declare(strict_types = 1);
 
 namespace Swift;
 
@@ -10,69 +11,76 @@ class Mysql {
 	const operate_both = 'both';
 	protected $id = 0;
 	protected $sql = '';
-	protected $error = '';
-	protected $datas = array();
-	protected $frags = array();
-	protected $links = array( 'read' => null, 'write' => null );
+	protected $error = null;
+	protected $datas = array ();
+	protected $links = array ('read' => null,'write' => null );
 	protected $ds = null;
-	protected $options = array( PDO::ATTR_CASE => PDO::CASE_LOWER, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_ORACLE_NULLS => PDO::NULL_NATURAL, PDO::ATTR_STRINGIFY_FETCHES => false );
-	protected $configs = array();
+	protected $options = array (PDO::ATTR_CASE => PDO::CASE_LOWER,PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,PDO::ATTR_ORACLE_NULLS => PDO::NULL_NATURAL,PDO::ATTR_STRINGIFY_FETCHES => false );
+	protected $configs = array ();
+	protected $errConfigs = array ();
 	
 	/**
 	 * void public function __construct(array $configs)
 	 */
-	public function __construct($configs) {
-		$this->configs = $configs;
-	}
-	
-	/**
-	 * string public function __get(string $prop)
-	 */
-	public function __get($prop) {
-		return isset( $this->frags [$prop] ) ? $this->frags [$prop] : '';
+	public function __construct(array $configs) {
+		if (! $configs) return;
+		elseif (! $this->isIntSeq ( array_keys ( $configs ), true )) return;
+		foreach ( $configs as $config ) {
+			if ($this->isConfig ( $config )) $this->configs [] = $config;
+		}
 	}
 	
 	/**
 	 * void public function __destruct(void)
 	 */
 	public function __destruct() {
-		$this->free();
-		$this->close();
+		$this->close ();
+	}
+	
+	/**
+	 * string public function __get(string $prop)
+	 */
+	public function __get(string $prop) {
+		return $this->datas [$prop] ?? '';
 	}
 	
 	/**
 	 * array protected function dsn(string $rw)
 	 */
-	protected function dsn($rw) {
-		$configs = array();
-		foreach ( $this->configs as $index => $config ) {
-			if (in_array( $config ['operate'], array( $rw, self::operate_both ) ) && ! in_array( $key, $this->errConfigs )) $configs [$index] = $config;
+	protected function dsn(string $rw): array 
+
+	{
+		$configs = array ();
+		foreach ( $this->configs as $key => $config ) {
+			$operate = in_array ( $config ['operate'], array ($rw,self::operate_both ), true );
+			$err = in_array ( $key, $this->errConfigs, true );
+			if ($operate && ! $err) $configs [$key] = $config;
 		}
 		if ($configs) {
-			$key = array_rand( $configs );
-			extract( $configs [$key] );
-			$dsn = array( 'host=' . $host, 'port=' . ( string ) $port, 'dbname=' . $dbname, 'charset=' . $charset );
-			return array( $key, $type . ':' . implode( ';', $dsn ), $username, $password );
+			$key = array_rand ( $configs );
+			extract ( $configs [$key] );
+			$dsn = array ('host=' . $host,'port=' . ( string ) $port,'dbname=' . $dbname,'charset=' . $charset );
+			return array ($key,$type . ':' . implode ( ';', $dsn ),$username,$password );
 		}
-		return array();
+		return array ();
 	}
 	
 	/**
-	 * boolean protected function link(string $rw);
+	 * boolean protected function link(string $rw)
 	 */
-	protected function link($rw) {
+	protected function link(string $rw): bool {
 		if ($this->link [$rw]) return true;
-		$config = $this->dsn( $rw );
-		if ($config) list ( $key, $dsn, $username, $password ) = $config;
+		$params = $this->dsn ( $rw );
+		if ($params) list ( $key, $dsn, $username, $password ) = $params;
 		else return false;
 		try {
-			$this->link [$rw] = new \PDO( $dsn, $username, $password, $this->options );
-			$this->errConfigs = array();
+			$this->link [$rw] = new \PDO ( $dsn, $username, $password, $this->options );
+			$this->errConfigs = array ();
 			return true;
 		} catch ( \PDOException $e ) {
-			// E($e->getMessage())
+			E($e->getMessage())
 			$this->errConfigs [] = $key;
-			return $this->link( $rw );
+			return $this->link ( $rw );
 		}
 	}
 	
@@ -80,7 +88,8 @@ class Mysql {
 	 * void public function close(void)
 	 */
 	public function close() {
-		$this->links = array( 'read' => null, 'write' => null );
+		$this->free ();
+		$this->links = array ('read' => null,'write' => null );
 	}
 	
 	/**
@@ -91,313 +100,154 @@ class Mysql {
 	}
 	
 	/**
-	 * boolean public function work(void);
+	 * boolean public function begin(void);
 	 */
-	public function work() {
-		if (! $this->link( self::operate_write )) return false;
-		elseif ($this->links [self::operate_write]->inTransaction()) return false;
-		return $this->links [self::operate_write]->beginTransaction();
+	public function begin(): bool {
+		if (! $this->link ( self::operate_write )) return false;
+		elseif ($this->links [self::operate_write]->inTransaction ()) return false;
+		return $this->links [self::operate_write]->beginTransaction ();
 	}
 	
 	/**
-	 * boolean public function commit(void)
+	 * boolean public function end(void)
 	 */
-	public function commit() {
+	public function end(): bool {
 		if (! $this->links [self::operate_write]) return false;
-		elseif (! $this->links [self::operate_write]->inTransaction()) return false;
-		return $this->links [self::operate_write]->commit();
+		elseif (! $this->links [self::operate_write]->inTransaction ()) return false;
+		return $this->links [self::operate_write]->commit ();
 	}
 	
 	/**
-	 * boolean public function rollback();
+	 * boolean public function rollback(void);
 	 */
-	public function rollback() {
+	public function rollback(): bool {
 		if (! $this->links [self::operate_write]) return false;
-		elseif (! $this->links [self::operate_write]->inTransaction()) return false;
-		return $this->links [self::operate_write]->rollback();
+		elseif (! $this->links [self::operate_write]->inTransaction ()) return false;
+		return $this->links [self::operate_write]->rollback ();
 	}
 	
 	/**
 	 * string public function error(void)
 	 */
-	public function error() {
-		$this->error = $this->ds ? implode( ':', $this->ds->errorInfo() ) : '';
+	public function error(): string {
+		$this->error = $this->ds ? implode ( ':', $this->ds->errorInfo () ) : null;
 		return $this->error;
 	}
 	
 	/**
-	 * void protected function sql(void);
+	 * boolean public function data(string $key, string $value)
 	 */
-	protected function sql() {
-		$keys = array( 'distinct', 'field', 'table', 'join', 'where', 'group', 'having', 'order', 'limit' );
-		$this->frags = array();
-		foreach ( $keys as $key ) {
-			if (isset( $this->datas [$key] )) {
-				$this->frags [$key] = $this->$key( $this->datas [$key] );
-			}
-		}
-	}
-	
-	/**
-	 * string protected function distinct(boolean $datas)
-	 */
-	protected function distinct($datas) {
-		if (is_bool( $datas )) return empty( $datas ) ? 'all' : 'distinct';
-		return '';
-	}
-	
-	/**
-	 * string protected function filed(array $datas=array([string $alias=>]string $field,...))
-	 * string protected function field(string $datas)
-	 */
-	protected function field($datas) {
-		if (is_string( $datas )) return $datas;
-		elseif (is_array( $datas )) {
-			foreach ( $datas as $key => $value ) {
-				$sqls [] = is_integer( $key ) ? $value : $key . ' as ' . $value;
-			}
-			return implode( ',', $sqls );
-		}
-		return '';
-	}
-	
-	/**
-	 * string protected function table(array $datas=array([string $alias=>]string $table,...))
-	 * string protected function table(string $datas)
-	 */
-	protected function table($datas) {
-		if (is_string( $datas )) return $datas;
-		elseif (is_array( $datas )) {
-			foreach ( $datas as $key => $value ) {
-				$sqls [] = is_integer( $key ) ? $value : $value . ' ' . $key;
-			}
-			return implode( ',', $sqls );
-		}
-		return '';
-	}
-	
-	/**
-	 * string protected function join(array $datas=array(array([string $alias=>]string $r.field ,[string $operator=>]string $l.field [,string $type]),...)
-	 * string protected function join(string $datas)
-	 */
-	protected function join($datas) {
-		if (is_string( $datas )) return $datas;
-		elseif (is_array( $datas )) {
-			foreach ( $datas as $data ) {
-				list ( $alias, $operator ) = array_keys( $data );
-				if (count( $data ) == 3) list ( $rfield, $lfield, $type ) = array_values( $data );
-				elseif (count( $data ) == 2) list ( $rfield, $lfield, $type ) = array_merge( array_values( $data ), 'inner' );
-				$types = array( 'inner' => 'inner join', 'left' => 'left outer join', 'right' => 'right outer join' );
-				$type = $types [$type];
-				$operators = array( 'eq' => '=', 'neq' => '!=' );
-				$operator = $operators [$operator];
-				list ( $r, $field ) = explode( '.', $rfield );
-				if (! is_string( $alias )) $rfield = $alias . '.' . $field;
-				$sqls [] = $type . ' ' . $r . ' ' . $alias . ' on ' . $lfield . $operator . $rfield;
-			}
-			return implode( ' ', $sqls );
-		}
-		return '';
-	}
-	
-	/**
-	 * string protected function where(array $datas=array(array([string $logic=>]string $field, [string $operator=>] scalar|array $require),...))
-	 * stirng protected function where(string $datas)
-	 */
-	protected function where($datas) {
-		if (is_string( $datas )) return 'where ' . $datas;
-		elseif (is_array( $datas )) {
-			foreach ( $datas as $data ) {
-				list ( $logic, $operator ) = array_keys( $data );
-				list ( $field, $require ) = array_values( $data );
-				is_integer( $logic ) ? $logic = 'and' : null;
-				is_integer( $operator ) ? $operator = 'eq' : null;
-				$field = $this->backquote( $field );
-				switch ($operator) {
-					case 'eq' :
-						if (is_integer( $require ) or is_float( $require )) $require = ( string ) $require;
-						elseif (is_string( $require )) $require = "'$require'";
-						elseif (is_bool( $require )) $require = empty( $require ) ? '0' : '1';
-						elseif (is_null( $require )) $require = 'null';
-						$sqls [] = $field . '=' . $require . ' ' . $logic;
-						break;
-					case 'neq' :
-						if (is_integer( $require ) or is_float( $require )) $require = ( string ) $require;
-						elseif (is_string( $require )) $require = "'$require'";
-						elseif (is_bool( $require )) $require = empty( $require ) ? '0' : '1';
-						elseif (is_null( $require )) $require = 'null';
-						$sqls [] = $field . '!=' . $require . ' ' . $logic;
-						break;
-				}
-			}
-			$sql = implode( ' ', $sqls );
-			return 'where ' . substr( $sql, 0, strrpos( $sql, ' ' ) );
-		}
-		return '';
-	}
-	
-	/**
-	 * string protected function group(array $datas=array(string $field[=>string $type],...)
-	 * string protected function group(string $datas)
-	 */
-	protected function group($datas) {
-		if (is_string( $datas )) return 'group by ' . $datas;
-		elseif (is_array( $datas )) {
-			foreach ( $data as $key => $value ) {
-				$sqls [] = is_integer( $key ) ? $value : $key . ' ' . $value;
-			}
-			return 'group by ' . implode( ',', $sqls );
-		}
-		return '';
-	}
-	
-	/**
-	 * string protected function having(array $datas=array(array([string $logic=>]string $field, [string $operator=>] scalar|array $require),...))
-	 * stirng protected function having(string $datas)
-	 */
-	protected function having($datas) {
-		if (is_string( $datas )) return 'having ' . $datas;
-		elseif (is_array( $datas )) {
-			foreach ( $datas as $data ) {
-				list ( $logic, $operator ) = array_keys( $data );
-				list ( $field, $require ) = array_values( $data );
-				is_integer( $logic ) ? $logic = 'and' : null;
-				is_integer( $operator ) ? $operator = 'eq' : null;
-				$field = $this->backquote( $field );
-				switch ($operator) {
-					case 'eq' :
-						if (is_integer( $require ) or is_float( $require )) $require = ( string ) $require;
-						elseif (is_string( $require )) $require = "'$require'";
-						elseif (is_bool( $require )) $require = empty( $require ) ? '0' : '1';
-						elseif (is_null( $require )) $require = 'null';
-						$sqls [] = $field . '=' . $require . ' ' . $logic;
-						break;
-					case 'neq' :
-						if (is_integer( $require ) or is_float( $require )) $require = ( string ) $require;
-						elseif (is_string( $require )) $require = "'$require'";
-						elseif (is_bool( $require )) $require = empty( $require ) ? '0' : '1';
-						elseif (is_null( $require )) $require = 'null';
-						$sqls [] = $field . '!=' . $require . ' ' . $logic;
-						break;
-				}
-			}
-			$sql = implode( ' ', $sqls );
-			return 'having ' . substr( $sql, 0, strrpos( $sql, ' ' ) );
-		}
-		return '';
-	}
-	
-	/**
-	 * string protected function order(array $datas=array(string $field[=>string $type],...))
-	 * string protected function order(string $datas)
-	 */
-	protected function order($datas) {
-		if (is_string( $datas )) return 'order by ' . $datas;
-		elseif (is_array( $datas )) {
-			foreach ( $data as $key => $value ) {
-				$sqls [] = is_integer( $key ) ? $value : $key . ' ' . $value;
-			}
-			return 'order by ' . implode( ',', $sqls );
-		}
-		return '';
-	}
-	
-	/**
-	 * string protected function limit(array $datas=array(integer $offset, integer $row))
-	 * string protected function limit(integer $datas)
-	 * string protected function limit(string $datas)
-	 */
-	protected function limit($datas) {
-		if (is_string( $datas )) return 'limit ' . $datas;
-		elseif (is_integer( $datas )) return 'limit ' . ( string ) $datas;
-		elseif (is_array( $datas )) return 'limit ' . implode( ',', $datas );
-		return '';
-	}
-	
-	/**
-	 * boolean|integer public function cmd(string $sql)
-	 */
-	public function cmd($sql) {
-		$this->sql = $sql;
-		if ($this->link( self::operate_write )) {
-			if ($this->ds) $this->free();
-			$this->ds = $this->link->prepare( $this->sql );
-			if ($this->ds && $this->ds->execute()) return $this->ds->rowCount;
+	public function data(string $key, string $value): bool {
+		$keysRegular = array ('distinct','field','table','join','where','group','having','order','limit' );
+		if (in_array ( $key, $keysRegular, true )) {
+			$this->datas [$key] = $value;
+			return true;
 		}
 		return false;
 	}
 	
 	/**
-	 * boolean|array public function query(string $sql)
+	 * boolean public function clearData(string $key)
 	 */
-	public function query($sql) {
-		$this->sql = $sql;
-		if ($this->link( self::operate_read )) {
-			if ($this->ds) $this->free();
-			$this->ds = $this->link->prepare( $this->sql );
-			if ($this->ds && $this->ds->execute()) return $this->ds->fetchAll( PDO::FETCH_ASSOC );
+	public function clearData(string $key): bool {
+		$keysRegular = array ('distinct','field','table','join','where','group','having','order','limit' );
+		if (in_array ( $key, $keysRegular, true )) {
+			unset ( $this->datas [$key] );
+			return true;
 		}
 		return false;
 	}
 	
 	/**
-	 * boolean|array public function select(void)
+	 * void public function clear(void)
+	 */
+	public function clear() {
+		$this->datas = array ();
+	}
+	
+	/**
+	 * integer public function cmd(string $sql)
+	 */
+	public function cmd(string $sql): int {
+		$this->sql = $sql;
+		if (! $this->link ( self::operate_write )) return - 1;
+		$this->ds = $this->link->prepare ( $this->sql );
+		return $this->ds && $this->ds->execute () ? $this->ds->rowCount () : - 1;
+	}
+	
+	/**
+	 * array public function query(string $sql)
+	 */
+	public function query(string $sql): array {
+		$this->sql = $sql;
+		if (! $this->link ( self::operate_read )) return array ();
+		$this->ds = $this->link->prepare ( $this->sql );
+		return $this->ds && $this->ds->execute () ? $this->ds->fetchAll ( PDO::FETCH_ASSOC ) : array ();
+	}
+	
+	/**
+	 * array public function select(void)
 	 */
 	public function select() {
-		$this->sql();
-		$sqls = array( 'select', $this->distinct, $this->column, 'from', $this->table, $this->join, $this->where, $this->group, $this->having, $this->order, $this->limit );
-		$sqls = array_filter( $sqls, 'strlen' );
-		return $this->query( implode( ' ', $sqls ) );
+		$sqlSections = array ('select',$this->distinct,$this->column,'from',$this->table,$this->join,$this->where,$this->group,$this->having,$this->order,$this->limit );
+		$sql = implode ( ' ', array_filter ( $sqlSections, 'strlen' ) );
+		return $this->query ( $sql );
 	}
 	
 	/**
-	 * boolean|integer public function insert(array $datas=array(string $field=>scalra|array $value,...))
+	 * integer public function insert(array $datas=array(string $field=>scalar $data,...))
 	 */
-	public function insert($datas) {
-		$regulars = $this->shell( $datas );
-		$keyStr = implode( ',', array_keys( $regulars ) );
-		$valueStr = implode( ',', array_values( $regulars ) );
-		$this->sql();
-		$sqls = array( 'insert', 'into', $this->table, '(' . $keyStr . ')', 'values(' . $valueStr . ')' );
-		$sqls = array_filter( $sqls, 'strlen' );
-		return $this->cmd( implode( ' ', $sqls ) );
+	public function insert(array $datas): int {
+		$datas = $this->shell ( $datas );
+		if (! $datas) return 0;
+		$keyStr = implode ( ',', array_keys ( $datas ) );
+		$valueStr = implode ( ',', array_values ( $datas ) );
+		$sqlSections = array ('insert','into',$this->table . '(' . $keyStr . ')','values(' . $valueStr . ')' );
+		$sql = implode ( ' ', $sqlSections );
+		return $this->cmd ( $sql );
 	}
 	
 	/**
-	 * boolean|integer public function update(array $datas=array(string $field=>scalar $value,...))
+	 * integer public function update(array $datas=array(string $field=>scalar $data,...))
 	 */
-	public function update($datas) {
-		$regulars = $this->shell( $datas );
-		foreach ( $regulars as $key => &$value ) {
+	public function update(array $datas): int {
+		$datas = $this->shell ( $datas );
+		if (! $datas) return 0;
+		foreach ( $datas as $key => &$value ) {
 			$value = $key . '=' . $value;
 		}
-		$dataStr = implode( ',', $regulars );
-		$this->sql();
-		$sqls = array( 'update', $this->table, 'set', $dataStr, $this->where, $this->order, $this->limit );
-		$sqls = array_filter( $sqls, 'strlen' );
-		return $this->cmd( implode( ' ', $sqls ) );
+		$dataStr = implode ( ',', $datas );
+		$sqlSections = array ('update',$this->table,'set',$dataStr,$this->where,$this->order,$this->limit );
+		$sql = implode ( ' ', array_filter ( $sqlSections, 'strlen' ) );
+		return $this->cmd ( $sql );
 	}
 	
 	/**
-	 * boolean|integer public function delete(void)
+	 * integer public function delete(void)
 	 */
-	public function delete() {
-		$this->sql();
-		$sqlFrags = array_filter( array( 'delete from', $this->table, $this->where, $this->order, $this->limit ), 'strlen' );
-		return $this->cmd( implode( ' ', $sqlFrags ) );
+	public function delete(): int {
+		$sqlSections = array ('delete','from',$this->table,$this->where,$this->order,$this->limit );
+		$sql = implode ( ' ', array_filter ( $sqlSections, 'strlen' ) );
+		return $this->cmd ( $sql );
 	}
 	
 	/**
-	 * boolean|array protected function shell(array $datas=array(string $field=>scalar|array $value,...))
+	 * array protected function shell(array $datas=array(string $field=>scalar $data,...))
 	 */
-	protected function shell($datas) {
+	protected function shell(array $datas): array {
+		if (! $datas) return array ();
+		elseif (! $this->isIntSeq ( array_keys ( $datas ), true )) return array ();
+		$regulars = array ();
 		foreach ( $datas as $key => $value ) {
-			$key = backquote( $key );
-			if (is_integer( $value ) or is_float( $value )) $value = ( string ) $value;
-			elseif (is_string( $value )) $value = "'" . htmlspecialchars( $value ) . "'";
-			elseif (is_bool( $value )) $value = $value ? '1' : '0';
-			elseif (is_null( $value )) $value = 'null';
-			elseif (is_array( $value )) $value = $value [0];
+			
+			$key = $this->backquote ( $key );
+			if (is_integer ( $value ) or is_float ( $value )) $value = ( string ) $value;
+			elseif (is_string ( $value )) {
+				$pattern = '/\{(.*)\}/';
+				$value = preg_match ( $pattern, $value, $matchs ) ? $value = $matchs [1] : "'" . htmlspecialchars ( $value ) . "'";
+			} elseif (is_bool ( $value )) $value = $value ? '1' : '0';
+			elseif (is_null ( $value )) $value = 'null';
+			else return array ();
 			$regulars [$key] = $value;
 		}
 		return $regulars;
@@ -406,56 +256,113 @@ class Mysql {
 	/**
 	 * array public function fields(string $table)
 	 */
-	public function fields($table) {
-		$sql = 'show columns from `' . $table . '`';
-		$fields = $this->query( $sql );
-		if (is_bool( $fields )) return array();
-		foreach ( $fields as $field ) {
-			$keys = array_map( 'strtolower', array_keys( $field ) );
-			$values = array_map( 'strotolower', array_values( $field ) );
-			$field = array_combine( $keys, $values );
-			if ('tiny(1)' == $field ['type']) $field ['type'] = 'boolean';
+	public function fields(string $table) {
+		if (! $this->isDbRegular ( $stable )) return array ();
+		$sql = 'describe ' . $this->backquote ( $table );
+		$datas = $this->query ( $sql );
+		if ($datas) return array ();
+		$fields = array ();
+		foreach ( $datas as $data ) {
+			$keys = array_map ( 'strtolower', array_keys ( $data ) );
+			$values = array_map ( 'strotolower', array_values ( $data ) );
+			$data = array_combine ( $keys, $values );
+			if ('tiny(1)' == $data ['type']) $data ['type'] = 'boolean';
 			else {
 				$pattern = '/^([a-z]+).*$/';
-				preg_match( $pattern, $field ['type'], $matchs );
-				$field ['type'] = $matchs [1];
+				preg_match ( $pattern, $data ['type'], $matchs );
+				$data ['type'] = $matchs [1];
 			}
-			$key = current( $field );
-			$datas [$key] = $field;
+			$fields [$data ['field']] = $data;
 		}
-		return $datas;
+		return $fields;
 	}
 	
 	/**
 	 * array public function map(void)
 	 */
 	public function map() {
-		return $maps = array( 'string' => array( 'char', 'varchar', 'binary', 'varbinary', 'tinyblob', 'blob', 'mediumblob', 'longblob', 'tinytext', 'text', 'mediumtext', 'longtext', 'date', 'datetime', 'timestamp', 'time', 'year', 'bit' ), 'integer' => array( 'tinyint', 'smallint', 'int', 'mediumint', 'bigint' ), 'float' => array( 'decimal', 'float', 'double' ), 'boolean' => array( 'boolean' ), 'null' => array() );
+		return $maps = array ('string' => array ('char','varchar','binary','varbinary','tinyblob','blob','mediumblob','longblob','tinytext','text','mediumtext','longtext','date','datetime','timestamp','time','year','bit' ),'integer' => array ('tinyint','smallint','int','mediumint','bigint' ),'float' => array ('decimal','float','double' ),'boolean' => array ('boolean' ),'null' => array () );
 	}
 	
 	/**
 	 * string protected backquote(string $data)
 	 */
-	protected function backquote($data) {
-		$datas = explode( '.', $data );
-		foreach ( $datas as &$value ) {
+	protected function backquote(string $data): string {
+		$dataSections = explode ( '.', $data );
+		foreach ( $dataSections as &$value ) {
 			$value = '`' . $value . '`';
 		}
-		return implode( '.', $datas );
+		return implode ( '.', $dataSections );
 	}
 	
 	/**
 	 * string public function lastSql(void)
 	 */
-	public function lastSql() {
+	public function lastSql(): string {
 		return $this->sql;
 	}
 	
 	/**
 	 * integer public function lastId(void)
 	 */
-	public function lastId() {
+	public function lastId(): int {
 		return $this->id;
+	}
+	
+	/**
+	 * boolean protected function isDbRegular(string $data)
+	 */
+	protected function isDbRegular(string $data): bool {
+		$pattern = '/^([a-z]+_)*[a-z]+$/';
+		return preg_match ( $pattern, $data ) ? true : false;
+	}
+	
+	/**
+	 * boolean protected function isDbRegularPlus(string $data)
+	 */
+	protected function isDbRegularPlus(string $data): bool {
+		$datas = explode ( '.', $data );
+		if (count ( $datas ) != 2) return false;
+		foreach ( $datas as $value ) {
+			if (! $this->isDbRegular ( $value )) return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * boolean protected function isConfig(array $datas=array(string $param=>string|integer $data,...))
+	 */
+	protected function isConfig(array $datas) {
+		if (count ( $datas ) != 8) return false;
+		foreach ( $datas as $key => $value ) {
+			if (! in_array ( $key, array ('operate','type','host','port','database','charset','username','password' ), true )) return false;
+			elseif ('port' == $key && ! is_integer ( $value )) return false;
+			elseif (! is_string ( $value )) return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * boolean protected function isIntSeq(array $datas ,boolean $mode=false)
+	 */
+	protected function isIntSeq(array $datas, bool $mode = false): bool {
+		$datas = $mode ? array_filter ( array_values ( $datas ), 'is_integer' ) : array_values ( $datas );
+		foreach ( $datas as $key => $value ) {
+			if ($key !== $value) return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * boolean protected function isStrSeq(array $datas, boolean $mode = false)
+	 */
+	protected function isStrSeq(string $datas, bool $mode = false): bool {
+		$datas = array_values ( $datas );
+		foreach ( $datas as $value ) {
+			if (! is_string ( $value )) return false;
+			elseif ($mode && '' == $value) return false;
+		}
+		return true;
 	}
 	//
 }

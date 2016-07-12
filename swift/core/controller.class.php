@@ -1,4 +1,5 @@
 <?php
+declare(strict_types = 1);
 
 namespace Swift;
 
@@ -10,35 +11,65 @@ abstract class controller {
 	protected $view = null;
 	
 	/**
-	 * public function __construct()
+	 * void public function __construct()
 	 */
 	public function __construct() {
 		$this->view = new \Swift\View ();
 	}
 	
 	/**
-	 * public function __destruct()
+	 * void public function __destruct()
 	 */
 	public function __destruct() {
 		//
 	}
 	
 	/**
-	 * public function display($data, $type, $charset)
+	 * mixed public function __get($name)
 	 */
-	public function display($data, $type = null, $charset = null) {
+	public function __get($name) {
+		return $this->view->get($name);
+	}
+	
+	/**
+	 * boolean public function __set($name, $value)
+	 */
+	public function __set($name, $value): bool 
+
+{
+	$this->view->assign ( $name, $value );
+}
+	
+	/**
+	 * boolean public function __isset(string $name)
+	 */
+	public function __isset($name): bool {
+		return is_null($this->view->get($name)) ? false : true;
+	}
+	
+	/**
+	 * void public function display(string $data, string $type = null, string $charset = null)
+	 */
+	public function display(string $data, string $type = null, string $charset = null) {
 		$this->view->display ( $data, $type, $charset );
 	}
 	
 	/**
-	 * public function show($data, $type, $charset)
+	 * public function output(string $data, string $type = null, string $charset = null)
 	 */
-	public function show($data, $type, $charset) {
-		$this->view->show ( $data, $type, $charset );
+	public function output($data, $type = null, $charset =null) {
+		$this->view->output ( $data, $type, $charset );
 	}
 	
 	/**
-	 * public functioin ajax($data, $type)
+	 * string public function fetch(string $url)
+	 */
+	public function fetch(string $url): string{
+		return $this->view->fetch($url);
+	}
+	
+	/**
+	 * public function ajax($data, $type)
 	 */
 	public function ajax($data, $type = null) {
 		$type = is_null ( $type ) ? C ( 'ajax_default_type' ) : strtolower ( $type );
@@ -54,41 +85,33 @@ abstract class controller {
 	}
 	
 	/**
-	 * public function assign($name, $value)
-	 * public function assing($vars)
+	 * boolean public function assign(string $name, mixed $value)
 	 */
-	public function assign($name, $value = null) {
-		$this->view->assign ( $name, $value );
-		return $this;
+	public function assign($name, $value): bool 
+
+{
+	return $this->view->assign ( $name, $value );
+}
+	
+	/**
+	 * integer public function assigns(array $vars)
+	 */
+	public function assigns(array $vals): int{
+		return $this->view->assigns($vars);
 	}
 	
 	/**
-	 * public function __set($name, $value)
+	 * mixed public function get(string $name)
 	 */
-	public function __set($name, $value) {
-		$this->view->assing ( $name, $value );
-	}
-	
-	/**
-	 * public function get($name)
-	 */
-	public function get($name = null) {
+	public function get(string $name) {
 		return $this->view->get ( $name );
 	}
 	
 	/**
-	 * public function __get($name)
+	 * array public function gets()
 	 */
-	public function __get($name) {
-		return $this->get ( $name );
+	public function gets(): array {
+		return $this->view->gets();
 	}
-	
-	/**
-	 * public function __isset($name)
-	 */
-	public function __isset($name) {
-		return $this->view->get ( $name );
-	}
-	
 	//
 }

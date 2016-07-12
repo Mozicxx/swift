@@ -1,13 +1,18 @@
 <?php
+declare(strict_types = 1);
 
 /**
  */
-defined ( 'swift_path' ) ?  : define ( 'swift_path', './swift' );
+defined( 'swift_path' ) ?: define( 'swift_path', './swift' );
+defined( 'app_path' ) ?: define( 'app_path', './app' );
 
 /**
  */
-$depr = '/';
-require swift_path . $depr . 'core' . $depr . 'core.class.php';
-$system = new \Swift\Core ();
-//$system->fire ();
+$sysCore = 'core';
+$path = implode( '/', array( swift_path, $sysCore, 'core.class.php' ) );
+require $path;
+$system = new \Swift\Core();
+$system->fire();
+$app = new \Swift\App();
+$app->fire();
 	

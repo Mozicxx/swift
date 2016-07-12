@@ -1,48 +1,33 @@
 <?php
+declare(strict_types = 1);
 
 namespace Swift;
 
 class Core {
 	
 	/**
+	 * Core protected function getSysFunc(void)
 	 */
-	protected function loadConfig() {
-		$depr = '/';
-		$file = swift_path . $depr . 'conf' . $depr . 'swift.conf.php';
-		if (is_file ( $file )) {
-			$configs = include $file;
-			if (is_array ( $configs )) {
+	protected function getSysFunc() {
+		$sysFunction = 'func';
+		$fileName = 'swift.func.php';
+		$path = implode( '/', array( swift_path, $sysFunction, $fileName ) );
+		if (is_file( $path )) include $path;
+		return $this;
+	}
+	
+	/**
+	 * Core protected function getSysConfig(void)
+	 */
+	protected function getSysConfig() {
+		$sysConfig = 'conf';
+		$fileName = 'swift.conf.php';
+		$path = implode( '/', array( swift_path, $sysConfig, $fileName ) );
+		if (is_file( $path )) {
+			$configs = include $path;
+			if (is_array( $configs )) {
 				foreach ( $configs as $key => $value ) {
-					C ( $key, $value );
-				}
-				unset ( $vlaue );
-			}
-		}
-		return $this;
-	}
-	
-	/**
-	 */
-	protected function loadFunc() {
-		$depr = '/';
-		$file = swift_path . $depr . 'func' . $depr . 'swift.func.php';
-		if (is_file ( $file )) {
-			include $file;
-		}
-		return $this;
-	}
-	
-	/**
-	 */
-	protected function loadCore() {
-		$depr = '/';
-		$dir = swift_path . $depr . 'core';
-		if (is_dir ( $dir )) {
-			$arr = scandir ( $dir );
-			foreach ( $arr as $value ) {
-				$file = $dir . $depr . $value;
-				if (is_file ( $file ) && ('.class.php' == substr ( $value, - 10 )) && ('core.class.php' != $value)) {
-					require $file;
+					C( $key, $value );
 				}
 			}
 		}
@@ -50,26 +35,47 @@ class Core {
 	}
 	
 	/**
+	 * Core protected function getSysCore(void)
 	 */
-	protected function loadLibrary() {
-		$depr = '/';
-		$dir = swift_path . $depr . 'library';
-		if (is_dir ( $dir )) {
-			$arr = scandir ( $dir );
-			foreach ( $arr as $value ) {
-				$file = $dir . $depr . $value;
-				if (is_file ( $file ) && ('.php' == substr ( $value, - 4 ))) {
-					include $file;
-				}
+	protected function getSysCore() {
+		$sysCore = 'core';
+		$path = implode( '/', array( swift_path, $sysCore ) );
+		if (is_dir( $path )) {
+			$files = scandir( $path );
+			foreach ( $files as $file ) {
+				$filePath = implode( '/', array( $path, $file ) );
+				if (! is_file( $filePath )) continue;
+				elseif ('core.class.php' == $file) continue;
+				elseif (strtolower( substr( $file, - 10 ) ) != '.class.php') continue;
+				require $file;
 			}
 		}
 		return $this;
 	}
 	
 	/**
+	 * Core protected function getSysLibrary(void)
+	 */
+	protected function getSysLibrary() {
+		$sysLibrary = 'library';
+		$path = implode( '/', array( swift_path, $sysLibrary ) );
+		if (is_dir( $path )) {
+			$files = scandir( $path );
+			foreach ( $files as $file ) {
+				$filePath = implode( '/', array( $path, $file ) );
+				if (! is_file( $filePath )) continue;
+				elseif (strtolower( substr( $file, - 4 ) ) != '.php') continue;
+				include $filePath;
+			}
+		}
+		return $this;
+	}
+	
+	/**
+	 * void public function fire(void)
 	 */
 	public function fire() {
-		$this->loadConfig ()->loadFunc ()->loadCore ()->loadLibrary ();
+		$this->getSysFunc()->getSysConfig()->getSysCore()->getSysLibrary();
 	}
 	//
 }
